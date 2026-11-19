@@ -6,11 +6,13 @@ import { emailTemplates } from './email-templates.js';
 import { NotificationsService } from './notifications.service.js';
 import { smsTemplates } from './sms-templates.js';
 
-export type AppointmentMessageKind = 'booked' | 'pending' | 'rescheduled' | 'cancelledByPractice' | 'cancelledByPatient' | 'reminder';
+export type AppointmentMessageKind = 'booked' | 'pending' | 'accepted' | 'refused' | 'rescheduled' | 'cancelledByPractice' | 'cancelledByPatient' | 'reminder';
 
 const TEMPLATE_KEY: Record<AppointmentMessageKind, string> = {
   booked: 'appointment.booked',
   pending: 'appointment.pending',
+  accepted: 'appointment.accepted',
+  refused: 'appointment.refused',
   rescheduled: 'appointment.rescheduled',
   cancelledByPractice: 'appointment.cancelled_by_practice',
   cancelledByPatient: 'appointment.cancelled_by_patient',
@@ -20,6 +22,8 @@ const TEMPLATE_KEY: Record<AppointmentMessageKind, string> = {
 const EMAIL = {
   booked: emailTemplates.appointmentBooked,
   pending: emailTemplates.appointmentPending,
+  accepted: emailTemplates.appointmentAccepted,
+  refused: emailTemplates.appointmentRefused,
   rescheduled: emailTemplates.appointmentRescheduled,
   cancelledByPractice: emailTemplates.appointmentCancelledByPractice,
   cancelledByPatient: emailTemplates.appointmentCancelledByPatient,
@@ -29,6 +33,8 @@ const EMAIL = {
 const SMS = {
   booked: smsTemplates.appointmentBooked,
   pending: smsTemplates.appointmentPending,
+  accepted: smsTemplates.appointmentAccepted,
+  refused: smsTemplates.appointmentRefused,
   rescheduled: smsTemplates.appointmentRescheduled,
   cancelledByPractice: smsTemplates.appointmentCancelledByPractice,
   cancelledByPatient: smsTemplates.appointmentCancelledByPatient,
@@ -60,7 +66,8 @@ export class AppointmentMessagesService {
       : null;
     const p = a.agenda.practitioner;
     const practice = a.agenda.practice;
-    const manageUrl = account
+    // A refused request sends the patient back to the practitioner's page to pick another time.
+    const manageUrl = account && kind !== 'refused'
       ? `${this.config.APP_URL}/mon-compte/rendez-vous`
       : `${this.config.APP_URL}/${p.speciality.slug}/${practice.locality.slug}/${p.slug}`;
     const email = account?.user.email ?? a.patientRecord.email;

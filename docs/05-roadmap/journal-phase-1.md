@@ -206,3 +206,20 @@ Tests automatisés : 112 au total (API 74, dont 3 nouveaux : aucune donnée méd
 ## Écarts et limites
 - ~~Un rendez-vous du jour déjà passé mais non clôturé reste compté « à venir »~~ Corrigé le 19/11/2026 : un rendez-vous terminé à l’horaire mais jamais clôturé n’est plus compté « à venir » ; il porte l’étiquette « À clôturer » et le chiffre du jour l’indique (« 1 à clôturer »). Un patient arrivé ou en consultation reste « en cours » même après l’heure prévue (`apps/api/src/pro/day-summary.ts`, 4 tests).
 - L’accueil ne montre pas les alertes médicales (allergies) des patients du jour : elles restent dans le dossier et dans l’écran de consultation, pour ne pas mettre de données de santé sous les yeux du secrétariat.
+
+# Neuvième lot : validation des demandes en ligne (19 novembre 2026)
+
+Ticket AGENDA-07 (SPEC-05 §Règles 6). Avant ce lot, un cabinet en validation manuelle pouvait passer une demande en « confirmé », mais le patient n’en était pas prévenu, et un refus passait pour une annulation ordinaire.
+
+## Ce qui fonctionne
+- **Tiroir du rendez-vous** : une demande en attente affiche un encadré « Demande en ligne à valider » avec « Accepter la demande » et « Refuser ». Le refus demande un motif interne facultatif (jamais envoyé) et propose de prévenir le patient. Les boutons de statut et « Annuler le rendez-vous » sont masqués tant que la demande n’a pas de réponse.
+- **Messages au patient** (e-mail, SMS de secours) : « Votre demande est acceptée » avec les détails du rendez-vous, ou « Votre demande n’a pas été acceptée » avec un lien vers la page du soignant pour choisir un autre créneau. Les deux SMS tiennent en 160 caractères GSM-7.
+- **Historique** : un refus est inscrit « Demande refusée » (`REFUSED`), distinct d’une annulation.
+- **Accueil** : chaque demande de « Demandes à valider » ouvre l’agenda sur ce rendez-vous (`/pro/app/agenda?rdv=<id>`).
+- **Bouton « danger »** dans `packages/ui` : les boutons « Confirmer le refus » et « Confirmer l’annulation » (tiroir Pro et compte patient) s’affichaient en bleu, le rouge ajouté par-dessus étant écrasé par la couleur du bouton.
+
+Tests automatisés : tous passent (1 test d’intégration ajouté : acceptation, refus, messages, historique ; 2 modèles SMS ajoutés au test de longueur). Lint, typecheck et build passent. Vérifié dans le navigateur : accueil et tiroir à 1280 px, tiroir et formulaire de refus à 375 px, e-mail « demande acceptée » envoyé (fournisseur factice).
+
+## Écarts et limites
+- Pas de rappel au cabinet quand une demande attend depuis 24 h (prévu par la spec).
+- Accepter une demande dont l’heure est passée reste possible.

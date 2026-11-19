@@ -94,7 +94,7 @@ export function AppointmentCard({ appointment: a }: { appointment: PatientAppoin
           <div className="flex flex-col gap-3 rounded-md bg-background-soft p-4">
             <p className="text-sm text-ink">Annuler ce rendez-vous ? Le créneau sera proposé à d’autres patients.</p>
             <div className="flex flex-wrap gap-2">
-              <Button variant="primary" size="sm" className="bg-danger hover:bg-danger" onClick={cancel} disabled={busy}>
+              <Button variant="danger" size="sm" onClick={cancel} disabled={busy}>
                 {busy ? 'Annulation…' : 'Oui, annuler le rendez-vous'}
               </Button>
               <Button variant="secondary" size="sm" onClick={() => setConfirming(false)} disabled={busy}>

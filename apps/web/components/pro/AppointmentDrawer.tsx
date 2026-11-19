@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { FolderOpen, MessageSquare, Phone, Stethoscope, UserRound } from 'lucide-react';
+import { Check, FolderOpen, Globe, MessageSquare, Phone, Stethoscope, UserRound, X } from 'lucide-react';
 import { Badge, Button, buttonClasses } from '@twabibu/ui';
 import { formatDateLong, formatPhone, formatTime, toDateKey, zonedToUtc } from '@twabibu/utils';
 import { api, ApiError, errorMessage } from '@/lib/api-client';
@@ -18,10 +18,12 @@ const STATUS_ACTION: Partial<Record<AppointmentStatus, string>> = {
   NO_SHOW: 'Non honoré',
 };
 
-const EVENT_LABEL: Record<string, string> = { BOOKED: 'Rendez-vous pris', STATUS_CHANGED: 'Statut modifié', RESCHEDULED: 'Déplacé', CANCELLED: 'Annulé', CONFIRMED_BY_PATIENT: 'Présence confirmée par le patient' };
+const EVENT_LABEL: Record<string, string> = { BOOKED: 'Rendez-vous pris', STATUS_CHANGED: 'Statut modifié', RESCHEDULED: 'Déplacé', CANCELLED: 'Annulé', REFUSED: 'Demande refusée', CONFIRMED_BY_PATIENT: 'Présence confirmée par le patient' };
 const MESSAGE_LABEL: Record<string, string> = {
   'appointment.booked': 'confirmation',
   'appointment.pending': 'demande',
+  'appointment.accepted': 'demande acceptée',
+  'appointment.refused': 'demande refusée',
   'appointment.rescheduled': 'déplacement',
   'appointment.cancelled_by_practice': 'annulation',
   'appointment.cancelled_by_patient': 'annulation',
@@ -51,7 +53,10 @@ export function AppointmentDrawer({ appointment, onClose, onChanged }: { appoint
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState<{ events: { type: string; at: string }[]; notifications: { template: string; channel: string; status: string; createdAt: string }[] } | null>(null);
-  const cancellable = ['CONFIRMED', 'PENDING_VALIDATION', 'ARRIVED'].includes(appointment.status);
+  const pending = appointment.status === 'PENDING_VALIDATION';
+  // A pending request is answered (accept / refuse), not cancelled.
+  const cancellable = ['CONFIRMED', 'ARRIVED'].includes(appointment.status);
+  const [refusing, setRefusing] = useState(false);
 
   useEffect(() => {
     api<typeof history>(`${base}/history`).then(setHistory).catch(() => setHistory(null));
@@ -77,7 +82,7 @@ export function AppointmentDrawer({ appointment, onClose, onChanged }: { appoint
     <Drawer title={`${p.firstName} ${p.lastName}`} onClose={onClose}>
       <div className="flex flex-col gap-5">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone={appointment.status === 'NO_SHOW' ? 'warning' : appointment.status === 'CONFIRMED' ? 'info' : 'success'}>{STATUS_LABEL[appointment.status]}</Badge>
+          <Badge tone={appointment.status === 'NO_SHOW' || appointment.status === 'PENDING_VALIDATION' ? 'warning' : appointment.status === 'CONFIRMED' ? 'info' : 'success'}>{STATUS_LABEL[appointment.status]}</Badge>
           <Badge>{SOURCE_LABEL[appointment.source]}</Badge>
           {appointment.allowOverlap ? <Badge tone="warning">Surbooking</Badge> : null}
           {appointment.confirmedByPatientAt ? <Badge tone="success">Présence confirmée</Badge> : null}
@@ -132,7 +137,45 @@ export function AppointmentDrawer({ appointment, onClose, onChanged }: { appoint
           </p>
         ) : null}
 
-        {(NEXT_STATUSES[appointment.status] ?? []).length ? (
+        {pending ? (
+          <section aria-labelledby="request-title" className="flex flex-col gap-3 rounded-md border border-warning bg-warning-soft p-3">
+            <h3 id="request-title" className="flex items-center gap-2 text-sm font-bold text-ink">
+              <Globe aria-hidden="true" size={16} /> Demande en ligne à valider
+            </h3>
+            <p className="text-sm text-text">Le patient attend votre réponse. Il la reçoit par e-mail, ou par SMS s’il n’a pas d’e-mail.</p>
+            {refusing ? (
+              <div className="flex flex-col gap-3">
+                <label className="flex flex-col gap-1 text-sm font-medium text-ink">
+                  Motif du refus (facultatif, non envoyé au patient)
+                  <input value={reason} onChange={(e) => setReason(e.target.value)} className={fieldClass} />
+                </label>
+                <label className="flex gap-2 text-sm text-text">
+                  <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
+                  Prévenir le patient et l’inviter à choisir un autre créneau
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="danger" size="sm" disabled={busy} onClick={() => run(() => api(`${base}/cancel`, { method: 'POST', body: { reason: reason.trim() || undefined, notifyPatient: notify } }))}>
+                    Confirmer le refus
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setRefusing(false)}>
+                    Retour
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" disabled={busy} onClick={() => run(() => api(base, { method: 'PATCH', body: { status: 'CONFIRMED' } }))}>
+                  <Check aria-hidden="true" size={16} /> Accepter la demande
+                </Button>
+                <Button variant="secondary" size="sm" disabled={busy} onClick={() => setRefusing(true)}>
+                  <X aria-hidden="true" size={16} /> Refuser
+                </Button>
+              </div>
+            )}
+          </section>
+        ) : null}
+
+        {!pending && (NEXT_STATUSES[appointment.status] ?? []).length ? (
           <section className="flex flex-col gap-2">
             <h3 className="text-sm font-bold">Statut</h3>
             <div className="flex flex-wrap gap-2">
@@ -188,7 +231,7 @@ export function AppointmentDrawer({ appointment, onClose, onChanged }: { appoint
                   Prévenir le patient (e-mail, ou SMS sans e-mail)
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" className="bg-danger hover:bg-danger" disabled={busy} onClick={() => run(() => api(`${base}/cancel`, { method: 'POST', body: { reason: reason.trim() || undefined, notifyPatient: notify } }))}>
+                  <Button variant="danger" size="sm" disabled={busy} onClick={() => run(() => api(`${base}/cancel`, { method: 'POST', body: { reason: reason.trim() || undefined, notifyPatient: notify } }))}>
                     Confirmer l’annulation
                   </Button>
                   <Button variant="secondary" size="sm" onClick={() => setCancelling(false)}>

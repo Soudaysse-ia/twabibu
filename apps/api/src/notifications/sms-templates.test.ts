@@ -17,6 +17,8 @@ describe('SMS templates', () => {
       smsTemplates.otp('482193'),
       smsTemplates.appointmentBooked(longCase),
       smsTemplates.appointmentPending(longCase),
+      smsTemplates.appointmentAccepted(longCase),
+      smsTemplates.appointmentRefused({ ...longCase, manageUrl: 'twabibu.km/medecin-generaliste/moroni/amina-said' }),
       smsTemplates.appointmentRescheduled(longCase),
       smsTemplates.appointmentCancelledByPractice({ ...longCase, manageUrl: 'twabibu.km/medecin-generaliste/moroni/amina-said' }),
       smsTemplates.appointmentCancelledByPatient({ ...longCase, manageUrl: 'twabibu.km/medecin-generaliste/moroni/amina-said' }),

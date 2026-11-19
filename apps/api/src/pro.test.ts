@@ -172,6 +172,42 @@ describe('Practice space', () => {
     await amina.post(`/v1/pro/orgs/${orgId}/appointments/${colleagueAppt.id}/cancel`).send({}).expect(404);
   });
 
+  it('accepts or refuses an online request and tells the patient each time', async () => {
+    const secretary = await login(SECRETARY);
+    const agendas = (await secretary.get(`/v1/pro/orgs/${orgId}/agendas`).expect(200)).body;
+    const agenda = agendas.find((a: { practitioner: { name: string } }) => a.practitioner.name === 'Dr Amina Saïd');
+    const { at } = freeMonday(10, 1);
+    const phone = randomPhone();
+    // Online requests come from the booking flow; here they are made pending directly.
+    const request = async (h: number, record?: string) => {
+      const a = (await secretary.post(`/v1/pro/orgs/${orgId}/appointments`).send({ agendaId: agenda.id, motiveId: agenda.motives[0].id, startsAt: at(h), notifyPatient: false, ...(record ? { patientRecordId: record } : { newPatient: { firstName: 'Saïd', lastName: 'Demande', phone } }) }).expect(201)).body;
+      created.appointments.push(a.id);
+      await prisma.appointment.update({ where: { id: a.id }, data: { status: 'PENDING_VALIDATION', source: 'ONLINE' } });
+      return a;
+    };
+
+    const first = await request(10);
+    created.records.push(first.patient.id);
+    const accepted = (await secretary.patch(`/v1/pro/orgs/${orgId}/appointments/${first.id}`).send({ status: 'CONFIRMED' }).expect(200)).body;
+    assert.equal(accepted.status, 'CONFIRMED');
+    const yes = await prisma.notification.findFirst({ where: { relatedAppointmentId: first.id, template: 'appointment.accepted' } });
+    assert.ok((yes?.payload as { text: string }).text.includes('demande acceptee'));
+
+    const second = await request(11, first.patient.id);
+    const refused = (await secretary.post(`/v1/pro/orgs/${orgId}/appointments/${second.id}/cancel`).send({ reason: 'Agenda complet' }).expect(200)).body;
+    assert.equal(refused.status, 'CANCELLED_BY_PRACTICE');
+    const no = await prisma.notification.findFirst({ where: { relatedAppointmentId: second.id, template: 'appointment.refused' } });
+    const text = (no?.payload as { text: string }).text;
+    assert.ok(text.includes('non acceptee'), text);
+    assert.equal(text.includes('Agenda complet'), false, 'the internal reason is never sent');
+    assert.equal(text.includes('mon-compte'), false, 'points to the practitioner page to pick another time');
+    const history = (await secretary.get(`/v1/pro/orgs/${orgId}/appointments/${second.id}/history`).expect(200)).body;
+    assert.deepEqual(history.events.map((e: { type: string }) => e.type), ['BOOKED', 'REFUSED']);
+
+    // A confirmed appointment cannot go back to pending.
+    await secretary.patch(`/v1/pro/orgs/${orgId}/appointments/${first.id}`).send({ status: 'PENDING_VALIDATION' }).expect(400);
+  });
+
   it('lets the practitioner change her motives and online windows, not the secretary', async () => {
     const amina = await login(AMINA);
     const secretary = await login(SECRETARY);

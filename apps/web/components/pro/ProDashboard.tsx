@@ -137,16 +137,18 @@ export function ProDashboard() {
             ) : (
               <ul className="flex flex-col gap-2 text-sm">
                 {d.pending.map((p) => (
-                  <li key={p.id} className="flex flex-col">
-                    <span className="font-medium text-ink">{p.patient.name}</span>
-                    <span className="text-text-muted first-letter:uppercase">
-                      {formatDateLong(new Date(p.startsAt))} à {formatTime(new Date(p.startsAt))} · {p.motive}
-                    </span>
+                  <li key={p.id}>
+                    <Link href={`/pro/app/agenda?rdv=${p.id}`} className="-mx-2 flex min-h-11 flex-col justify-center rounded-md px-2 py-1 hover:bg-background-soft" aria-label={`Répondre à la demande de ${p.patient.name}`}>
+                      <span className="font-medium text-primary">{p.patient.name}</span>
+                      <span className="text-text-muted first-letter:uppercase">
+                        {formatDateLong(new Date(p.startsAt))} à {formatTime(new Date(p.startsAt))} · {p.motive}
+                      </span>
+                    </Link>
                   </li>
                 ))}
                 <li>
                   <Link href="/pro/app/agenda" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-                    Valider dans l’agenda <ChevronRight aria-hidden="true" size={14} />
+                    Voir l’agenda <ChevronRight aria-hidden="true" size={14} />
                   </Link>
                 </li>
               </ul>

@@ -65,9 +65,18 @@ export function AgendaView() {
 
   useEffect(() => {
     if (window.matchMedia('(max-width: 767px)').matches) setMode('day');
+    // Deep link from the home page (« Demandes à valider »): /pro/app/agenda?rdv=<id> opens that appointment on its day.
+    const rdv = new URLSearchParams(window.location.search).get('rdv');
+    if (rdv)
+      api<ProAppointment>(`/v1/pro/orgs/${org}/appointments/${encodeURIComponent(rdv)}`)
+        .then((a) => {
+          setDate(toDateKey(new Date(a.startsAt)));
+          setOpened(a);
+        })
+        .catch((err) => setError(errorMessage(err)));
     const t = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(t);
-  }, []);
+  }, [org]);
 
   useEffect(() => {
     api<ProAgenda[]>(`/v1/pro/orgs/${org}/agendas`)
