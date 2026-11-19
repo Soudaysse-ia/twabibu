@@ -73,7 +73,7 @@ Dépôt > *Settings* :
 Les images sont publiées sur GitHub Packages (`ghcr.io/soudaysse-ia/twabibu-api`, `-web`, `-admin`) et restent privées : à chaque déploiement, le serveur utilise un jeton temporaire du workflow, effacé juste après.
 
 ## 7. Premier déploiement
-- **Pré-production** : chaque fusion sur `main` construit les images et déploie. On peut aussi lancer *Actions > Deploy > Run workflow* avec `staging` et un tag existant. Le premier déploiement crée la base, applique les migrations et charge les référentiels et les données de démo fictives.
+- **Pré-production** : chaque fusion sur `main` construit les images et déploie. On peut aussi lancer *Actions > Deploy > Run workflow* avec `staging` et un tag existant. Le premier déploiement crée la base, applique les migrations et charge les référentiels et les données de démo fictives. Les comptes patients, Pro et Pharma de démo fonctionnent avec le code `000000` ; **il n’y a pas de compte d’administration de démo** (n’importe qui aurait pu s’en emparer) : créez le vôtre comme en production, avec `create-admin.ts` (ci-dessous).
 - **Production** : créer un tag de version (`git tag v0.1.0 && git push origin v0.1.0`), puis valider le déploiement dans GitHub. Ensuite, **une seule fois**, charger les référentiels (îles, localités, spécialités, médicaments ; jamais de données de démo en production) et créer le premier administrateur :
 ```bash
 ssh deploy@<IP-production>
