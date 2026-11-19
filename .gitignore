@@ -1,0 +1,25 @@
+node_modules/
+.pnpm-store/
+.turbo/
+dist/
+build/
+.next/
+out/
+coverage/
+storybook-static/
+.expo/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+infra/data/
+*.tsbuildinfo
+next-env.d.ts
+# Generated from docs/02-design/design-tokens.json at build time
+packages/tokens/theme.css
+packages/tokens/src/generated/

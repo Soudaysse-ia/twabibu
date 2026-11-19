@@ -1,0 +1,1418 @@
+// Twabibu — schéma de données (PostgreSQL 16). Référence : docs/03-architecture/modele-de-donnees.md
+// Conventions : identifiants uuid v7, horodatages timestamptz en UTC, code en anglais.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────── Enums ─────────────────────────
+
+enum UserKind {
+  PATIENT
+  PROFESSIONAL
+  PHARMACY_STAFF
+  PLATFORM_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum OtpPurpose {
+  SIGNUP
+  LOGIN
+  PHONE_CHANGE
+  BOOKING_GUEST
+}
+
+enum IslandCode {
+  NGAZIDJA
+  NDZUANI
+  MWALI
+}
+
+enum SpecialityGroup {
+  MEDICAL
+  DENTAL
+  MIDWIFERY
+  PARAMEDICAL
+  PHARMACY
+  LAB
+  WELLBEING
+}
+
+enum OrganizationType {
+  SOLO_PRACTICE
+  GROUP_PRACTICE
+  HEALTH_CENTER
+  CLINIC
+  HOSPITAL
+  LAB
+  PHARMACY
+}
+
+enum OrganizationStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  PRACTITIONER
+  SECRETARY
+  PHARMACIST
+  PHARMACY_STAFF
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  CHANGES_REQUESTED
+  VERIFIED
+  REJECTED
+}
+
+enum VerificationDocumentType {
+  DIPLOMA
+  LICENSE
+  ID_CARD
+  OPENING_AUTHORIZATION
+  OTHER
+}
+
+enum Recurrence {
+  WEEKLY
+  BIWEEKLY
+}
+
+enum AppointmentStatus {
+  PENDING_VALIDATION
+  CONFIRMED
+  ARRIVED
+  IN_CONSULTATION
+  DONE
+  NO_SHOW
+  CANCELLED_BY_PATIENT
+  CANCELLED_BY_PRACTICE
+}
+
+enum AppointmentSource {
+  ONLINE
+  PRACTICE
+  PHONE
+  WALK_IN
+}
+
+enum DocumentDirection {
+  TO_PATIENT
+  FROM_PATIENT
+}
+
+enum DocumentType {
+  PRESCRIPTION
+  REPORT
+  CERTIFICATE
+  RESULT
+  OTHER
+}
+
+enum NotificationChannel {
+  SMS
+  EMAIL
+  WHATSAPP
+  PUSH
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+}
+
+enum ConsentScope {
+  READ
+  READ_WRITE
+}
+
+enum RecordAccessReason {
+  CARE
+  EMERGENCY
+}
+
+enum AllergySeverity {
+  MILD
+  MODERATE
+  SEVERE
+}
+
+enum DataSource {
+  PATIENT_DECLARED
+  PRACTITIONER
+}
+
+enum MedicalHistoryType {
+  MEDICAL
+  SURGICAL
+  FAMILY
+  OBSTETRIC
+  LIFESTYLE
+}
+
+enum TreatmentStatus {
+  ACTIVE
+  STOPPED
+  COMPLETED
+}
+
+enum VitalType {
+  WEIGHT_KG
+  HEIGHT_CM
+  SYSTOLIC_MMHG
+  DIASTOLIC_MMHG
+  HEART_RATE_BPM
+  TEMPERATURE_C
+  SPO2_PERCENT
+  GLYCEMIA_G_L
+  HEAD_CIRCUMFERENCE_CM
+}
+
+enum PrescriptionType {
+  MEDICATION
+  LAB
+  IMAGING
+  CARE
+}
+
+enum PrescriptionStatus {
+  DRAFT
+  SIGNED
+  SENT_TO_PHARMACY
+  PARTIALLY_DISPENSED
+  DISPENSED
+  EXPIRED
+  CANCELLED
+}
+
+enum ShareStatus {
+  SENT
+  ANSWERED
+  ACCEPTED
+  DECLINED
+}
+
+enum ProductAvailability {
+  IN_STOCK
+  LOW
+  OUT_OF_STOCK
+  ON_ORDER
+}
+
+enum OrderMode {
+  PICKUP
+  DELIVERY
+}
+
+enum OrderPaymentMode {
+  AT_PICKUP
+  CASH_ON_DELIVERY
+  MOBILE_MONEY
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  PREPARING
+  READY
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum PlacementSlot {
+  LOCALITY_TOP
+  DUTY_PAGE
+  DRUG_PAGE
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  MVOLA
+  HURI
+  CARD
+}
+
+enum ReportStatus {
+  OPEN
+  IN_REVIEW
+  CLOSED
+}
+
+// ───────────────────────── Comptes ─────────────────────────
+
+model User {
+  id                 String     @id @default(uuid(7)) @db.Uuid
+  /// E.164, vérifié par SMS. Identifiant principal des patients.
+  phone              String?    @unique
+  phoneVerifiedAt    DateTime?  @db.Timestamptz(3)
+  email              String?    @unique
+  emailVerifiedAt    DateTime?  @db.Timestamptz(3)
+  /// argon2id
+  passwordHash       String?
+  kind               UserKind
+  status             UserStatus @default(ACTIVE)
+  locale             String     @default("fr")
+  /// Secret TOTP chiffré (FieldCrypto). Actif quand twoFactorEnabledAt est renseigné.
+  twoFactorSecret    String?
+  twoFactorEnabledAt DateTime?  @db.Timestamptz(3)
+  /// Back-office : SUPERADMIN, VERIFIER, SUPPORT, FINANCE (kind = PLATFORM_ADMIN)
+  adminRoles         String[]   @default([])
+  lastLoginAt        DateTime?  @db.Timestamptz(3)
+  createdAt          DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime   @updatedAt @db.Timestamptz(3)
+  deletedAt          DateTime?  @db.Timestamptz(3)
+
+  patientProfile          PatientProfile?
+  memberships             Membership[]
+  sessions                Session[]
+  deviceTokens            DeviceToken[]
+  notificationPreferences NotificationPreference?
+}
+
+model PatientProfile {
+  id               String              @id @default(uuid(7)) @db.Uuid
+  userId           String              @unique @db.Uuid
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  civility         String?
+  firstName        String
+  lastName         String
+  birthDate        DateTime            @db.Date
+  sex              String?
+  addressLine      String?
+  localityId       String?             @db.Uuid
+  locality         Locality?           @relation(fields: [localityId], references: [id])
+  insurance        String?
+  preferredChannel NotificationChannel @default(SMS)
+  createdAt        DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime            @updatedAt @db.Timestamptz(3)
+
+  relatives Relative[]
+}
+
+/// Proche géré par le titulaire du compte (enfant, parent…). N'a pas de compte.
+model Relative {
+  id               String         @id @default(uuid(7)) @db.Uuid
+  patientProfileId String         @db.Uuid
+  patientProfile   PatientProfile @relation(fields: [patientProfileId], references: [id], onDelete: Cascade)
+  firstName        String
+  lastName         String
+  birthDate        DateTime       @db.Date
+  sex              String?
+  relationship     String
+  phone            String?
+  createdAt        DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @db.Timestamptz(3)
+
+  @@index([patientProfileId])
+}
+
+model Session {
+  id            String    @id @default(uuid(7)) @db.Uuid
+  userId        String    @db.Uuid
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// SHA-256 du refresh token
+  tokenHash     String    @unique
+  /// Famille de rotation, pour détecter la réutilisation
+  familyId      String    @db.Uuid
+  userAgent     String?
+  ip            String?
+  expiresAt     DateTime  @db.Timestamptz(3)
+  revokedAt     DateTime? @db.Timestamptz(3)
+  /// Second facteur (TOTP) validé pour cette session : exigé par le back-office
+  mfaVerifiedAt DateTime? @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([userId])
+}
+
+model OtpCode {
+  id         String     @id @default(uuid(7)) @db.Uuid
+  /// Adresse e-mail (ou numéro E.164 pour l'ancien parcours SMS)
+  recipient  String
+  codeHash   String
+  purpose    OtpPurpose
+  attempts   Int        @default(0)
+  expiresAt  DateTime   @db.Timestamptz(3)
+  consumedAt DateTime?  @db.Timestamptz(3)
+  createdAt  DateTime   @default(now()) @db.Timestamptz(3)
+
+  @@index([recipient, purpose, createdAt])
+}
+
+model DeviceToken {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform  String
+  token     String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+model NotificationPreference {
+  userId         String   @id @db.Uuid
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sms            Boolean  @default(true)
+  email          Boolean  @default(true)
+  whatsapp       Boolean  @default(false)
+  push           Boolean  @default(true)
+  reminderOptOut Boolean  @default(false)
+  marketingOptIn Boolean  @default(false)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+}
+
+// ───────────────────────── Référentiels ─────────────────────────
+
+model Island {
+  id         String     @id @default(uuid(7)) @db.Uuid
+  code       IslandCode @unique
+  /// Nom comorien (Ngazidja, Ndzuani, Mwali)
+  name       String
+  /// Nom français (Grande Comore, Anjouan, Mohéli), cherché aussi par l'autocomplétion
+  frenchName String     @default("")
+  slug       String     @unique
+
+  localities Locality[]
+}
+
+model Locality {
+  id              String           @id @default(uuid(7)) @db.Uuid
+  islandId        String           @db.Uuid
+  island          Island           @relation(fields: [islandId], references: [id])
+  name            String
+  slug            String           @unique
+  lat             Float
+  lng             Float
+  kind            String           @default("town")
+  isActive        Boolean          @default(true)
+  patientProfiles PatientProfile[]
+  practices       Practice[]
+
+  @@index([islandId])
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "locality_name_trgm")
+}
+
+model Speciality {
+  id             String          @id @default(uuid(7)) @db.Uuid
+  name           String
+  slug           String          @unique
+  group          SpecialityGroup
+  canPrescribe   Boolean         @default(false)
+  /// Modèles de motifs proposés à l'onboarding : [{ name, durationMinutes }]
+  defaultMotives Json            @default("[]")
+  sortOrder      Int             @default(0)
+  isActive       Boolean         @default(true)
+
+  expertises    Expertise[]
+  practitioners Practitioner[]
+
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "speciality_name_trgm")
+}
+
+model Expertise {
+  id           String     @id @default(uuid(7)) @db.Uuid
+  specialityId String     @db.Uuid
+  speciality   Speciality @relation(fields: [specialityId], references: [id])
+  name         String
+
+  @@unique([specialityId, name])
+}
+
+model Language {
+  code String @id
+  name String
+}
+
+model Insurance {
+  id   String @id @default(uuid(7)) @db.Uuid
+  name String @unique
+  kind String @default("private")
+}
+
+model Holiday {
+  date        DateTime @id @db.Date
+  name        String
+  /// Fêtes islamiques : date à confirmer chaque année par l'autorité religieuse
+  isEstimated Boolean  @default(false)
+}
+
+// ───────────────────────── Structures et professionnels ─────────────────────────
+
+model Organization {
+  id          String             @id @default(uuid(7)) @db.Uuid
+  name        String
+  slug        String             @unique
+  type        OrganizationType
+  status      OrganizationStatus @default(PENDING)
+  logoUrl     String?
+  description String?
+  phone       String?
+  email       String?
+  website     String?
+  plan        String             @default("discovery")
+  createdAt   DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime           @updatedAt @db.Timestamptz(3)
+
+  memberships          Membership[]
+  practitioners        Practitioner[]
+  practices            Practice[]
+  patientRecords       PatientRecord[]
+  pharmacyProfile      PharmacyProfile?
+  notificationSettings OrganizationNotificationSettings?
+  subscriptions        Subscription[]
+}
+
+model Membership {
+  id             String         @id @default(uuid(7)) @db.Uuid
+  userId         String         @db.Uuid
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String         @db.Uuid
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           MembershipRole
+  /// Surcharges de permissions (voir SPEC-07)
+  permissions    Json           @default("{}")
+  practitionerId String?        @unique @db.Uuid
+  practitioner   Practitioner?  @relation(fields: [practitionerId], references: [id])
+  invitedAt      DateTime?      @db.Timestamptz(3)
+  acceptedAt     DateTime?      @db.Timestamptz(3)
+  createdAt      DateTime       @default(now()) @db.Timestamptz(3)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+model Practitioner {
+  id                 String             @id @default(uuid(7)) @db.Uuid
+  organizationId     String             @db.Uuid
+  organization       Organization       @relation(fields: [organizationId], references: [id])
+  slug               String             @unique
+  title              String?
+  firstName          String
+  lastName           String
+  specialityId       String             @db.Uuid
+  speciality         Speciality         @relation(fields: [specialityId], references: [id])
+  photoUrl           String?
+  bio                String?
+  acceptsNewPatients Boolean            @default(true)
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  verifiedAt         DateTime?          @db.Timestamptz(3)
+  /// Numéro d'autorisation d'exercer
+  licenseNumber      String?
+  canPrescribe       Boolean            @default(false)
+  languages          String[]           @default([])
+  expertises         String[]           @default([])
+  educations         Json               @default("[]")
+  experiences        Json               @default("[]")
+  paymentMethods     String[]           @default([])
+  insurancesAccepted String[]           @default([])
+  isPublished        Boolean            @default(false)
+  createdAt          DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime           @updatedAt @db.Timestamptz(3)
+  deletedAt          DateTime?          @db.Timestamptz(3)
+
+  membership            Membership?
+  practices             PractitionerPractice[]
+  agendas               Agenda[]
+  verificationDocuments VerificationDocument[]
+
+  @@index([specialityId])
+  @@index([organizationId])
+  @@index([lastName])
+  @@index([lastName(ops: raw("gin_trgm_ops"))], type: Gin, map: "practitioner_lastname_trgm")
+}
+
+/// Lieu de consultation (cabinet, site d'un établissement, officine).
+model Practice {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  addressLine    String
+  localityId     String       @db.Uuid
+  locality       Locality     @relation(fields: [localityId], references: [id])
+  lat            Float?
+  lng            Float?
+  phone          String?
+  /// { floor, elevator, parking, wheelchair, notes }
+  accessInfo     Json         @default("{}")
+  /// { mon: [["08:00","12:00"],["14:00","17:00"]], … }
+  openingHours   Json         @default("{}")
+  photos         String[]     @default([])
+  createdAt      DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime     @updatedAt @db.Timestamptz(3)
+
+  practitioners PractitionerPractice[]
+  agendas       Agenda[]
+
+  @@index([localityId])
+  @@index([organizationId])
+}
+
+model PractitionerPractice {
+  practitionerId String       @db.Uuid
+  practitioner   Practitioner @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  practiceId     String       @db.Uuid
+  practice       Practice     @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+
+  @@id([practitionerId, practiceId])
+}
+
+model VerificationDocument {
+  id             String                   @id @default(uuid(7)) @db.Uuid
+  practitionerId String?                  @db.Uuid
+  practitioner   Practitioner?            @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  /// Renseigné pour la vérification d'une structure (pharmacie, clinique)
+  organizationId String?                  @db.Uuid
+  type           VerificationDocumentType
+  /// Clé S3 du fichier chiffré
+  fileKey        String
+  status         VerificationStatus       @default(PENDING)
+  reviewedById   String?                  @db.Uuid
+  reviewNote     String?
+  createdAt      DateTime                 @default(now()) @db.Timestamptz(3)
+
+  @@index([practitionerId])
+}
+
+// ───────────────────────── Agenda ─────────────────────────
+
+model Agenda {
+  id                              String       @id @default(uuid(7)) @db.Uuid
+  practitionerId                  String       @db.Uuid
+  practitioner                    Practitioner @relation(fields: [practitionerId], references: [id])
+  practiceId                      String       @db.Uuid
+  practice                        Practice     @relation(fields: [practiceId], references: [id])
+  name                            String
+  color                           String       @default("blue")
+  timezone                        String       @default("Indian/Comoro")
+  slotStepMinutes                 Int          @default(15)
+  bookingHorizonDays              Int          @default(90)
+  minNoticeMinutes                Int          @default(120)
+  maxActiveAppointmentsPerPatient Int          @default(2)
+  onlineBookingEnabled            Boolean      @default(true)
+  requiresValidation              Boolean      @default(false)
+  blockHolidays                   Boolean      @default(true)
+  isDefault                       Boolean      @default(false)
+  createdAt                       DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt                       DateTime     @updatedAt @db.Timestamptz(3)
+
+  motives           Motive[]
+  availabilityRules AvailabilityRule[]
+  absences          Absence[]
+  appointments      Appointment[]
+  waitlistRequests  WaitlistRequest[]
+
+  @@index([practitionerId])
+}
+
+model Motive {
+  id                        String   @id @default(uuid(7)) @db.Uuid
+  agendaId                  String   @db.Uuid
+  agenda                    Agenda   @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+  name                      String
+  durationMinutes           Int
+  color                     String   @default("blue")
+  isOnline                  Boolean  @default(true)
+  newPatientsAllowed        Boolean  @default(true)
+  /// Consignes affichées au patient avant la confirmation
+  instructions              String?
+  /// Questions préalables : [{ id, label, type, options, blocking }]
+  questions                 Json     @default("[]")
+  priceKmf                  Int?
+  cancellationDeadlineHours Int      @default(24)
+  minNoticeMinutes          Int?
+  sortOrder                 Int      @default(0)
+  isActive                  Boolean  @default(true)
+  createdAt                 DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt                 DateTime @updatedAt @db.Timestamptz(3)
+
+  appointments Appointment[]
+
+  @@index([agendaId])
+}
+
+/// Plage hebdomadaire réservable en ligne.
+model AvailabilityRule {
+  id           String     @id @default(uuid(7)) @db.Uuid
+  agendaId     String     @db.Uuid
+  agenda       Agenda     @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+  /// 0 = dimanche … 6 = samedi
+  weekday      Int
+  /// Minutes depuis minuit, heure locale de l'agenda
+  startMinutes Int
+  endMinutes   Int
+  /// Vide = tous les motifs
+  motiveIds    String[]   @default([]) @db.Uuid
+  capacity     Int        @default(1)
+  validFrom    DateTime?  @db.Date
+  validUntil   DateTime?  @db.Date
+  recurrence   Recurrence @default(WEEKLY)
+  anchorDate   DateTime?  @db.Date
+
+  @@index([agendaId, weekday])
+}
+
+model Absence {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  agendaId       String   @db.Uuid
+  agenda         Agenda   @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+  startsAt       DateTime @db.Timestamptz(3)
+  endsAt         DateTime @db.Timestamptz(3)
+  reason         String?
+  allDay         Boolean  @default(false)
+  /// RRULE iCalendar pour les absences récurrentes
+  recurrenceRule String?
+  createdById    String?  @db.Uuid
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([agendaId, startsAt])
+}
+
+// ───────────────────────── Rendez-vous ─────────────────────────
+
+model Appointment {
+  id                     String            @id @default(uuid(7)) @db.Uuid
+  agendaId               String            @db.Uuid
+  agenda                 Agenda            @relation(fields: [agendaId], references: [id])
+  motiveId               String            @db.Uuid
+  motive                 Motive            @relation(fields: [motiveId], references: [id])
+  patientRecordId        String            @db.Uuid
+  patientRecord          PatientRecord     @relation(fields: [patientRecordId], references: [id])
+  /// Compte patient qui a réservé (null si créé par le cabinet pour un patient sans compte)
+  patientProfileId       String?           @db.Uuid
+  relativeId             String?           @db.Uuid
+  startsAt               DateTime          @db.Timestamptz(3)
+  endsAt                 DateTime          @db.Timestamptz(3)
+  status                 AppointmentStatus @default(CONFIRMED)
+  source                 AppointmentSource
+  /// Surbooking forcé par le cabinet ou plage à capacité > 1 : sort le RDV de la contrainte d'exclusion
+  allowOverlap           Boolean           @default(false)
+  bookedByUserId         String?           @db.Uuid
+  /// Notes internes du cabinet (non médicales)
+  notes                  String?
+  patientMessage         String?
+  answers                Json?
+  instructionsAcceptedAt DateTime?         @db.Timestamptz(3)
+  confirmedByPatientAt   DateTime?         @db.Timestamptz(3)
+  cancelledAt            DateTime?         @db.Timestamptz(3)
+  cancellationReason     String?
+  rescheduledFromId      String?           @unique @db.Uuid
+  rescheduledFrom        Appointment?      @relation("Reschedule", fields: [rescheduledFromId], references: [id])
+  rescheduledTo          Appointment?      @relation("Reschedule")
+  createdAt              DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime          @updatedAt @db.Timestamptz(3)
+
+  events    AppointmentEvent[]
+  reminders AppointmentReminder[]
+
+  @@index([agendaId, startsAt])
+  @@index([patientProfileId, startsAt])
+  @@index([patientRecordId, startsAt])
+}
+
+/// Un rappel envoyé (ou en cours d'envoi). L'unicité empêche tout doublon, même avec deux planificateurs ;
+/// startsAt en fait partie pour qu'un RDV déplacé reçoive un nouveau rappel.
+model AppointmentReminder {
+  id            String               @id @default(uuid(7)) @db.Uuid
+  appointmentId String               @db.Uuid
+  appointment   Appointment          @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  offsetHours   Int
+  startsAt      DateTime             @db.Timestamptz(3)
+  channel       NotificationChannel?
+  createdAt     DateTime             @default(now()) @db.Timestamptz(3)
+
+  @@unique([appointmentId, offsetHours, startsAt])
+}
+
+model AppointmentEvent {
+  id            String      @id @default(uuid(7)) @db.Uuid
+  appointmentId String      @db.Uuid
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  type          String
+  actorUserId   String?     @db.Uuid
+  payload       Json        @default("{}")
+  createdAt     DateTime    @default(now()) @db.Timestamptz(3)
+
+  @@index([appointmentId])
+}
+
+model WaitlistRequest {
+  id               String    @id @default(uuid(7)) @db.Uuid
+  agendaId         String    @db.Uuid
+  agenda           Agenda    @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+  patientProfileId String    @db.Uuid
+  motiveId         String    @db.Uuid
+  before           DateTime  @db.Timestamptz(3)
+  status           String    @default("ACTIVE")
+  notifiedAt       DateTime? @db.Timestamptz(3)
+  createdAt        DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([agendaId, status])
+}
+
+// ───────────────────────── Patientèle (vue cabinet) ─────────────────────────
+
+/// Fiche du patient dans UNE structure. Une structure ne voit jamais la fiche d'une autre.
+model PatientRecord {
+  id               String          @id @default(uuid(7)) @db.Uuid
+  organizationId   String          @db.Uuid
+  organization     Organization    @relation(fields: [organizationId], references: [id])
+  patientProfileId String?         @db.Uuid
+  relativeId       String?         @db.Uuid
+  firstName        String
+  lastName         String
+  birthDate        DateTime?       @db.Date
+  sex              String?
+  phone            String?
+  email            String?
+  addressLine      String?
+  localityId       String?         @db.Uuid
+  insurance        String?
+  /// Notes administratives, visibles par le secrétariat
+  adminNotes       String?
+  tags             String[]        @default([])
+  isBlocked        Boolean         @default(false)
+  blockReason      String?
+  noShowCount      Int             @default(0)
+  mergedIntoId     String?         @db.Uuid
+  mergedInto       PatientRecord?  @relation("Merge", fields: [mergedIntoId], references: [id])
+  mergedFrom       PatientRecord[] @relation("Merge")
+  externalRef      String?
+  createdAt        DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime        @updatedAt @db.Timestamptz(3)
+  deletedAt        DateTime?       @db.Timestamptz(3)
+
+  appointments  Appointment[]
+  clinicalNotes ClinicalNote[]
+  documents     Document[]
+  medicalRecord MedicalRecord?
+
+  @@index([organizationId, phone])
+  @@index([organizationId, lastName, firstName])
+  @@index([patientProfileId])
+}
+
+/// Note privée du praticien, jamais partagée, chiffrée applicativement.
+model ClinicalNote {
+  id               String        @id @default(uuid(7)) @db.Uuid
+  patientRecordId  String        @db.Uuid
+  patientRecord    PatientRecord @relation(fields: [patientRecordId], references: [id], onDelete: Cascade)
+  practitionerId   String        @db.Uuid
+  appointmentId    String?       @db.Uuid
+  /// AES-256-GCM
+  contentEncrypted String
+  createdAt        DateTime      @default(now()) @db.Timestamptz(3)
+
+  @@index([patientRecordId])
+}
+
+model Document {
+  id               String            @id @default(uuid(7)) @db.Uuid
+  organizationId   String?           @db.Uuid
+  patientRecordId  String?           @db.Uuid
+  patientRecord    PatientRecord?    @relation(fields: [patientRecordId], references: [id])
+  patientProfileId String?           @db.Uuid
+  appointmentId    String?           @db.Uuid
+  uploadedByUserId String            @db.Uuid
+  direction        DocumentDirection
+  type             DocumentType
+  title            String
+  fileKey          String
+  mimeType         String
+  sizeBytes        Int
+  sharedAt         DateTime?         @db.Timestamptz(3)
+  viewedAt         DateTime?         @db.Timestamptz(3)
+  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
+
+  labResults LabResult[]
+
+  @@index([patientRecordId])
+  @@index([patientProfileId])
+}
+
+// ───────────────────────── Dossier médical (SPEC-13) ─────────────────────────
+
+/// Un dossier par personne. Partagé entre structures uniquement avec consentement.
+model MedicalRecord {
+  id               String         @id @default(uuid(7)) @db.Uuid
+  patientProfileId String?        @unique @db.Uuid
+  relativeId       String?        @unique @db.Uuid
+  /// Patient sans compte : dossier rattaché à la fiche du cabinet
+  patientRecordId  String?        @unique @db.Uuid
+  patientRecord    PatientRecord? @relation(fields: [patientRecordId], references: [id])
+  bloodGroup       String?
+  createdAt        DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @db.Timestamptz(3)
+
+  consents      RecordConsent[]
+  accessLogs    RecordAccessLog[]
+  allergies     Allergy[]
+  history       MedicalHistoryItem[]
+  vaccinations  Vaccination[]
+  treatments    CurrentTreatment[]
+  consultations Consultation[]
+  vitals        Vital[]
+  labResults    LabResult[]
+  followUps     FollowUpPlan[]
+  prescriptions Prescription[]
+}
+
+model RecordConsent {
+  id             String        @id @default(uuid(7)) @db.Uuid
+  recordId       String        @db.Uuid
+  record         MedicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  organizationId String        @db.Uuid
+  scope          ConsentScope  @default(READ_WRITE)
+  grantedVia     String
+  grantedAt      DateTime      @default(now()) @db.Timestamptz(3)
+  revokedAt      DateTime?     @db.Timestamptz(3)
+
+  @@index([recordId, organizationId])
+}
+
+/// Journal de chaque lecture du dossier, visible par le patient. Table en ajout seul.
+model RecordAccessLog {
+  id             String             @id @default(uuid(7)) @db.Uuid
+  recordId       String             @db.Uuid
+  record         MedicalRecord      @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  actorUserId    String             @db.Uuid
+  organizationId String             @db.Uuid
+  section        String
+  reason         RecordAccessReason @default(CARE)
+  justification  String?
+  createdAt      DateTime           @default(now()) @db.Timestamptz(3)
+
+  @@index([recordId, createdAt])
+}
+
+model Allergy {
+  id             String          @id @default(uuid(7)) @db.Uuid
+  recordId       String          @db.Uuid
+  /// Structure qui a écrit l’entrée : sans consentement du patient, une autre structure ne la voit pas (SPEC-13)
+  organizationId String?         @db.Uuid
+  record         MedicalRecord   @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  substance      String
+  /// Renseigné quand l'allergie porte sur un médicament : sert aux alertes de prescription
+  drugDci        String?
+  reaction       String?
+  severity       AllergySeverity @default(MODERATE)
+  source         DataSource
+  authorId       String?         @db.Uuid
+  notedAt        DateTime        @default(now()) @db.Timestamptz(3)
+  resolvedAt     DateTime?       @db.Timestamptz(3)
+
+  @@index([recordId])
+}
+
+model MedicalHistoryItem {
+  id               String             @id @default(uuid(7)) @db.Uuid
+  recordId         String             @db.Uuid
+  /// Structure qui a écrit l’entrée : sans consentement du patient, une autre structure ne la voit pas (SPEC-13)
+  organizationId   String?            @db.Uuid
+  record           MedicalRecord      @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  type             MedicalHistoryType
+  label            String
+  occurredOn       DateTime?          @db.Date
+  detailsEncrypted String?
+  source           DataSource
+  authorId         String?            @db.Uuid
+  createdAt        DateTime           @default(now()) @db.Timestamptz(3)
+
+  @@index([recordId, type])
+}
+
+model Vaccination {
+  id             String        @id @default(uuid(7)) @db.Uuid
+  recordId       String        @db.Uuid
+  /// Structure qui a écrit l’entrée : sans consentement du patient, une autre structure ne la voit pas (SPEC-13)
+  organizationId String?       @db.Uuid
+  record         MedicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  vaccine        String
+  givenOn        DateTime      @db.Date
+  lot            String?
+  nextDueOn      DateTime?     @db.Date
+  authorId       String?       @db.Uuid
+  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
+
+  @@index([recordId])
+}
+
+model CurrentTreatment {
+  id             String          @id @default(uuid(7)) @db.Uuid
+  recordId       String          @db.Uuid
+  /// Structure qui a écrit l’entrée : sans consentement du patient, une autre structure ne la voit pas (SPEC-13)
+  organizationId String?         @db.Uuid
+  record         MedicalRecord   @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  drugId         String?         @db.Uuid
+  drug           Drug?           @relation(fields: [drugId], references: [id])
+  label          String
+  posology       String
+  startedOn      DateTime        @db.Date
+  endsOn         DateTime?       @db.Date
+  prescriptionId String?         @db.Uuid
+  authorId       String?         @db.Uuid
+  status         TreatmentStatus @default(ACTIVE)
+  createdAt      DateTime        @default(now()) @db.Timestamptz(3)
+
+  @@index([recordId, status])
+}
+
+model Consultation {
+  id                String        @id @default(uuid(7)) @db.Uuid
+  recordId          String        @db.Uuid
+  record            MedicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  appointmentId     String?       @db.Uuid
+  practitionerId    String        @db.Uuid
+  organizationId    String        @db.Uuid
+  template          String        @default("general")
+  /// JSON chiffré : { reason, history, examination, diagnosis, plan }
+  sectionsEncrypted String
+  /// [{ code (CIM-10, optionnel), label }]
+  diagnoses         Json          @default("[]")
+  closedAt          DateTime?     @db.Timestamptz(3)
+  version           Int           @default(1)
+  previousVersionId String?       @unique @db.Uuid
+  previousVersion   Consultation? @relation("Version", fields: [previousVersionId], references: [id])
+  nextVersion       Consultation? @relation("Version")
+  createdAt         DateTime      @default(now()) @db.Timestamptz(3)
+
+  vitals Vital[]
+
+  @@index([recordId, createdAt])
+  @@index([organizationId])
+}
+
+model Vital {
+  id             String        @id @default(uuid(7)) @db.Uuid
+  recordId       String        @db.Uuid
+  /// Structure qui a écrit l’entrée : sans consentement du patient, une autre structure ne la voit pas (SPEC-13)
+  organizationId String?       @db.Uuid
+  record         MedicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  consultationId String?       @db.Uuid
+  authorId       String?       @db.Uuid
+  consultation   Consultation? @relation(fields: [consultationId], references: [id])
+  type           VitalType
+  value          Float
+  measuredAt     DateTime      @db.Timestamptz(3)
+  source         DataSource    @default(PRACTITIONER)
+
+  @@index([recordId, type, measuredAt])
+}
+
+model LabResult {
+  id         String        @id @default(uuid(7)) @db.Uuid
+  recordId   String        @db.Uuid
+  record     MedicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  documentId String?       @db.Uuid
+  document   Document?     @relation(fields: [documentId], references: [id])
+  label      String
+  /// [{ name, value, unit, referenceRange }]
+  analytes   Json          @default("[]")
+  resultedOn DateTime      @db.Date
+  createdAt  DateTime      @default(now()) @db.Timestamptz(3)
+
+  @@index([recordId])
+}
+
+model FollowUpPlan {
+  id             String        @id @default(uuid(7)) @db.Uuid
+  recordId       String        @db.Uuid
+  /// Structure qui a écrit l’entrée : sans consentement du patient, une autre structure ne la voit pas (SPEC-13)
+  organizationId String?       @db.Uuid
+  record         MedicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  condition      String
+  /// [{ label, everyMonths }]
+  checks         Json          @default("[]")
+  nextDueOn      DateTime?     @db.Date
+  status         String        @default("ACTIVE")
+  authorId       String        @db.Uuid
+  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
+
+  @@index([recordId])
+  @@index([nextDueOn])
+}
+
+// ───────────────────────── Ordonnance numérique (SPEC-14) ─────────────────────────
+
+/// Référentiel des médicaments (DCI + noms commerciaux locaux).
+model Drug {
+  id               String   @id @default(uuid(7)) @db.Uuid
+  dci              String
+  slug             String   @unique
+  brandNames       String[] @default([])
+  form             String
+  strength         String
+  route            String   @default("oral")
+  atcCode          String?
+  prescriptionOnly Boolean  @default(true)
+  controlled       Boolean  @default(false)
+  /// { adult, child } — indicatif, la prescription reste de la responsabilité du praticien
+  usualPosology    Json     @default("{}")
+  /// Liste nationale des médicaments essentiels
+  essential        Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now()) @db.Timestamptz(3)
+
+  prescriptionLines PrescriptionLine[]
+  treatments        CurrentTreatment[]
+  pharmacyProducts  PharmacyProduct[]
+
+  @@index([dci])
+}
+
+model Prescription {
+  id             String             @id @default(uuid(7)) @db.Uuid
+  recordId       String             @db.Uuid
+  record         MedicalRecord      @relation(fields: [recordId], references: [id])
+  practitionerId String             @db.Uuid
+  organizationId String             @db.Uuid
+  appointmentId  String?            @db.Uuid
+  /// Note au pharmacien (non médicale)
+  notes          String?
+  type           PrescriptionType   @default(MEDICATION)
+  status         PrescriptionStatus @default(DRAFT)
+  signedAt       DateTime?          @db.Timestamptz(3)
+  /// SHA-256 du contenu signé : une ordonnance signée est immuable
+  contentHash    String?
+  pdfKey         String?
+  /// Code public de vérification (QR) : twabibu.km/o/{code}
+  qrCode         String?            @unique
+  expiresAt      DateTime?          @db.Timestamptz(3)
+  renewals       Int                @default(0)
+  cancelledAt    DateTime?          @db.Timestamptz(3)
+  replacedById   String?            @unique @db.Uuid
+  replacedBy     Prescription?      @relation("Replace", fields: [replacedById], references: [id])
+  replaces       Prescription?      @relation("Replace")
+  createdAt      DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime           @updatedAt @db.Timestamptz(3)
+
+  lines         PrescriptionLine[]
+  shares        PrescriptionShare[]
+  dispensations Dispensation[]
+  orders        Order[]
+
+  @@index([recordId, createdAt])
+  @@index([practitionerId])
+}
+
+model PrescriptionLine {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  prescriptionId String       @db.Uuid
+  prescription   Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  drugId         String?      @db.Uuid
+  drug           Drug?        @relation(fields: [drugId], references: [id])
+  /// Libellé libre (examens, soins, produit hors référentiel)
+  freeText       String?
+  strength       String?
+  form           String?
+  /// { dose, unit, timesPerDay, moments, durationDays }
+  posology       Json         @default("{}")
+  posologyText   String
+  quantity       Int?
+  durationDays   Int?
+  substitutable  Boolean      @default(true)
+  notes          String?
+  sortOrder      Int          @default(0)
+
+  @@index([prescriptionId])
+}
+
+model PrescriptionTemplate {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  practitionerId String   @db.Uuid
+  name           String
+  lines          Json     @default("[]")
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([practitionerId])
+}
+
+/// Ordonnance envoyée par le patient à une pharmacie.
+model PrescriptionShare {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  prescriptionId String       @db.Uuid
+  prescription   Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  pharmacyId     String       @db.Uuid
+  status         ShareStatus  @default(SENT)
+  /// Réponse de la pharmacie : disponibilité et prix par ligne
+  response       Json?
+  sentAt         DateTime     @default(now()) @db.Timestamptz(3)
+  answeredAt     DateTime?    @db.Timestamptz(3)
+
+  @@unique([prescriptionId, pharmacyId])
+  @@index([pharmacyId, status])
+}
+
+model Dispensation {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  prescriptionId String       @db.Uuid
+  prescription   Prescription @relation(fields: [prescriptionId], references: [id])
+  pharmacyId     String       @db.Uuid
+  dispensedById  String       @db.Uuid
+  /// [{ lineId, quantity, substitutedBy }]
+  lines          Json
+  renewalIndex   Int          @default(0)
+  dispensedAt    DateTime     @default(now()) @db.Timestamptz(3)
+
+  @@index([prescriptionId])
+  @@index([pharmacyId])
+}
+
+// ───────────────────────── Pharmacies (SPEC-15) ─────────────────────────
+
+/// Complète une Organization de type PHARMACY.
+model PharmacyProfile {
+  organizationId String       @id @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  pharmacistName String?
+  licenseNumber  String?
+  services       String[]     @default([])
+  paymentMethods String[]     @default([])
+  /// [{ localityId, feeKmf }]
+  deliveryZones  Json         @default("[]")
+  verifiedAt     DateTime?    @db.Timestamptz(3)
+
+  dutySchedules DutySchedule[]
+  products      PharmacyProduct[]
+  orders        Order[]
+  placements    SponsoredPlacement[]
+}
+
+/// Tour de garde d'une pharmacie.
+model DutySchedule {
+  id         String          @id @default(uuid(7)) @db.Uuid
+  pharmacyId String          @db.Uuid
+  pharmacy   PharmacyProfile @relation(fields: [pharmacyId], references: [organizationId], onDelete: Cascade)
+  island     IslandCode
+  zone       String?
+  startsAt   DateTime        @db.Timestamptz(3)
+  endsAt     DateTime        @db.Timestamptz(3)
+  /// Origine de l'information : ministère, syndicat, pharmacie
+  source     String
+  updatedAt  DateTime        @updatedAt @db.Timestamptz(3)
+
+  @@index([island, startsAt, endsAt])
+}
+
+model PharmacyProduct {
+  id               String              @id @default(uuid(7)) @db.Uuid
+  pharmacyId       String              @db.Uuid
+  pharmacy         PharmacyProfile     @relation(fields: [pharmacyId], references: [organizationId], onDelete: Cascade)
+  drugId           String?             @db.Uuid
+  drug             Drug?               @relation(fields: [drugId], references: [id])
+  name             String
+  category         String              @default("medication")
+  priceKmf         Int
+  availability     ProductAvailability @default(IN_STOCK)
+  prescriptionOnly Boolean             @default(false)
+  /// Produit contrôlé : jamais commandable en ligne
+  controlled       Boolean             @default(false)
+  updatedAt        DateTime            @updatedAt @db.Timestamptz(3)
+
+  orderLines OrderLine[]
+
+  @@index([pharmacyId])
+  @@index([drugId])
+}
+
+model Order {
+  id                   String           @id @default(uuid(7)) @db.Uuid
+  pharmacyId           String           @db.Uuid
+  pharmacy             PharmacyProfile  @relation(fields: [pharmacyId], references: [organizationId])
+  patientProfileId     String?          @db.Uuid
+  guestPhone           String?
+  prescriptionId       String?          @db.Uuid
+  prescription         Prescription?    @relation(fields: [prescriptionId], references: [id])
+  /// Photo d'une ordonnance papier (clé S3)
+  prescriptionPhotoKey String?
+  mode                 OrderMode
+  /// { line, localityId, instructions, phone }
+  address              Json?
+  status               OrderStatus      @default(PENDING)
+  paymentMode          OrderPaymentMode
+  subtotalKmf          Int              @default(0)
+  deliveryFeeKmf       Int              @default(0)
+  /// { name, phone }
+  courier              Json?
+  createdAt            DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime         @updatedAt @db.Timestamptz(3)
+
+  lines  OrderLine[]
+  events OrderEvent[]
+
+  @@index([pharmacyId, status])
+  @@index([patientProfileId])
+}
+
+model OrderLine {
+  id           String           @id @default(uuid(7)) @db.Uuid
+  orderId      String           @db.Uuid
+  order        Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId    String?          @db.Uuid
+  product      PharmacyProduct? @relation(fields: [productId], references: [id])
+  label        String
+  quantity     Int
+  unitPriceKmf Int
+
+  @@index([orderId])
+}
+
+model OrderEvent {
+  id          String      @id @default(uuid(7)) @db.Uuid
+  orderId     String      @db.Uuid
+  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status      OrderStatus
+  actorUserId String?     @db.Uuid
+  note        String?
+  createdAt   DateTime    @default(now()) @db.Timestamptz(3)
+
+  @@index([orderId])
+}
+
+/// Espace sponsorisé « Pharmacie partenaire ».
+model SponsoredPlacement {
+  id         String          @id @default(uuid(7)) @db.Uuid
+  pharmacyId String          @db.Uuid
+  pharmacy   PharmacyProfile @relation(fields: [pharmacyId], references: [organizationId], onDelete: Cascade)
+  slot       PlacementSlot
+  island     IslandCode
+  zone       String?
+  startsAt   DateTime        @db.Timestamptz(3)
+  endsAt     DateTime        @db.Timestamptz(3)
+  priceKmf   Int
+  invoiceId  String?         @db.Uuid
+
+  @@index([slot, island, startsAt, endsAt])
+}
+
+// ───────────────────────── Plateforme ─────────────────────────
+
+model Notification {
+  id                   String              @id @default(uuid(7)) @db.Uuid
+  userId               String?             @db.Uuid
+  /// Destinataire hors compte
+  recipient            String?
+  channel              NotificationChannel
+  template             String
+  payload              Json                @default("{}")
+  status               NotificationStatus  @default(QUEUED)
+  provider             String?
+  providerId           String?
+  costKmf              Float?
+  error                String?
+  relatedAppointmentId String?             @db.Uuid
+  relatedOrderId       String?             @db.Uuid
+  createdAt            DateTime            @default(now()) @db.Timestamptz(3)
+  sentAt               DateTime?           @db.Timestamptz(3)
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([relatedAppointmentId])
+}
+
+model OrganizationNotificationSettings {
+  organizationId       String                @id @db.Uuid
+  organization         Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// Délais des rappels : 24 = la veille, 48 = deux jours avant, 72 = trois jours avant (SPEC-08)
+  reminderOffsetsHours Int[]                 @default([24])
+  /// Heure locale (Comores) d'envoi des rappels, de 7 à 20
+  reminderHour         Int                   @default(17)
+  askConfirmation      Boolean               @default(false)
+  channels             NotificationChannel[] @default([SMS, EMAIL])
+  smsQuotaMonthly      Int                   @default(500)
+  senderName           String                @default("Twabibu")
+}
+
+/// Journal d'audit en ajout seul (droits base restreints en production).
+model AuditLog {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  actorUserId    String?  @db.Uuid
+  organizationId String?  @db.Uuid
+  action         String
+  entityType     String
+  entityId       String?
+  ip             String?
+  /// Avant / après, tronqué, sans donnée médicale en clair
+  changes        Json?
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([entityType, entityId])
+  @@index([organizationId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
+model Subscription {
+  id             String             @id @default(uuid(7)) @db.Uuid
+  organizationId String             @db.Uuid
+  organization   Organization       @relation(fields: [organizationId], references: [id])
+  plan           String
+  status         SubscriptionStatus @default(TRIAL)
+  seats          Int                @default(1)
+  startedAt      DateTime           @default(now()) @db.Timestamptz(3)
+  renewsAt       DateTime?          @db.Timestamptz(3)
+
+  invoices Invoice[]
+
+  @@index([organizationId])
+}
+
+model Invoice {
+  id             String         @id @default(uuid(7)) @db.Uuid
+  subscriptionId String?        @db.Uuid
+  subscription   Subscription?  @relation(fields: [subscriptionId], references: [id])
+  number         String         @unique
+  amountKmf      Int
+  issuedAt       DateTime       @default(now()) @db.Timestamptz(3)
+  paidAt         DateTime?      @db.Timestamptz(3)
+  method         PaymentMethod?
+  reference      String?
+  pdfKey         String?
+}
+
+/// Signalement d'un profil ou d'un produit par un utilisateur.
+model Report {
+  id         String       @id @default(uuid(7)) @db.Uuid
+  entityType String
+  entityId   String       @db.Uuid
+  reason     String
+  details    String?
+  reporterId String?      @db.Uuid
+  status     ReportStatus @default(OPEN)
+  createdAt  DateTime     @default(now()) @db.Timestamptz(3)
+
+  @@index([status, createdAt])
+}
+
+model FeatureFlag {
+  key             String   @id
+  enabled         Boolean  @default(false)
+  /// Activation par structure : liste d'identifiants
+  organizationIds String[] @default([]) @db.Uuid
+  description     String?
+}

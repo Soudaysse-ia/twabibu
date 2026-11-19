@@ -1,0 +1,37 @@
+{
+  "name": "@twabibu/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3100",
+    "build": "next build",
+    "start": "next start --port 3100",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@twabibu/availability": "workspace:*",
+    "@twabibu/contracts": "workspace:*",
+    "@twabibu/i18n": "workspace:*",
+    "@twabibu/tokens": "workspace:*",
+    "@twabibu/ui": "workspace:*",
+    "@twabibu/utils": "workspace:*",
+    "lucide-react": "^1.72.0",
+    "next": "^16.4.6",
+    "qrcode": "^1.5.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/node": "^24.0.0",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.5",
+    "typescript": "~6.0.2",
+    "vitest": "^5.1.0"
+  }
+}

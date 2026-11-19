@@ -1,0 +1,8 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "twabibu-api", "runtimeExecutable": "pnpm", "runtimeArgs": ["--filter", "@twabibu/api", "start"], "port": 4000 },
+    { "name": "twabibu-web", "runtimeExecutable": "pnpm", "runtimeArgs": ["--filter", "@twabibu/web", "dev"], "port": 3100 },
+    { "name": "twabibu-admin", "runtimeExecutable": "pnpm", "runtimeArgs": ["--filter", "@twabibu/admin", "dev"], "port": 3200 }
+  ]
+}

@@ -1,0 +1,323 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "meta": {
+    "name": "Twabibu",
+    "version": "1.2.0",
+    "source": "docs/02-design/direction-artistique.md",
+    "brand": {
+      "logo": "assets/brand/logo-twabibu-fond-bleu.svg",
+      "blue": "#2A6BCB",
+      "tagline": "À vos côtés, dans chaque temps de soin.",
+      "logoBlue": "#1956B4"
+    },
+    "theme": "light-only"
+  },
+  "color": {
+    "primary": {
+      "value": "#2A6BCB"
+    },
+    "primary-hover": {
+      "value": "#2360BA"
+    },
+    "primary-active": {
+      "value": "#1956B4"
+    },
+    "primary-soft": {
+      "value": "#E6EEF9"
+    },
+    "navy": {
+      "value": "#0B2A5B"
+    },
+    "navy-700": {
+      "value": "#2B4162"
+    },
+    "ink": {
+      "value": "#192634"
+    },
+    "text": {
+      "value": "#2B4162"
+    },
+    "text-muted": {
+      "value": "#5D7186"
+    },
+    "surface": {
+      "value": "#FFFFFF"
+    },
+    "background": {
+      "value": "#E8EEF7"
+    },
+    "background-soft": {
+      "value": "#F3F6FB"
+    },
+    "border": {
+      "value": "#D3DCEA"
+    },
+    "accent": {
+      "value": "#F5CF66"
+    },
+    "accent-hover": {
+      "value": "#EEC24A"
+    },
+    "success": {
+      "value": "#1B9C5A"
+    },
+    "success-soft": {
+      "value": "#E3F5EA"
+    },
+    "warning": {
+      "value": "#D97706"
+    },
+    "warning-soft": {
+      "value": "#FEF3E2"
+    },
+    "danger": {
+      "value": "#D23B3B"
+    },
+    "danger-soft": {
+      "value": "#FBE9E9"
+    },
+    "info": {
+      "value": "#2A6BCB"
+    },
+    "info-soft": {
+      "value": "#E6EEF9"
+    },
+    "calendar": {
+      "blue": {
+        "value": "#BFDBFE"
+      },
+      "teal": {
+        "value": "#B2EBE4"
+      },
+      "green": {
+        "value": "#C7EFD4"
+      },
+      "yellow": {
+        "value": "#FDE9A9"
+      },
+      "orange": {
+        "value": "#FBD5B0"
+      },
+      "pink": {
+        "value": "#F9C9DB"
+      },
+      "purple": {
+        "value": "#DDD0F7"
+      },
+      "grey": {
+        "value": "#DCE3EA"
+      }
+    },
+    "slot": {
+      "value": "#E6F3FF"
+    },
+    "pharmacy": {
+      "value": "#0E8A6D"
+    },
+    "pharmacy-soft": {
+      "value": "#E0F3EE"
+    },
+    "brand-logo": {
+      "value": "#1956B4"
+    }
+  },
+  "font": {
+    "family": {
+      "heading": {
+        "value": "Montserrat, Arial, sans-serif"
+      },
+      "body": {
+        "value": "Roboto, Arial, sans-serif"
+      }
+    },
+    "size": {
+      "xs": {
+        "value": "12px"
+      },
+      "sm": {
+        "value": "14px"
+      },
+      "md": {
+        "value": "16px"
+      },
+      "lg": {
+        "value": "18px"
+      },
+      "xl": {
+        "value": "24px"
+      },
+      "display": {
+        "value": "32px"
+      },
+      "display-mobile": {
+        "value": "28px"
+      }
+    },
+    "lineHeight": {
+      "xs": {
+        "value": "16px"
+      },
+      "sm": {
+        "value": "20px"
+      },
+      "body": {
+        "value": "24px"
+      },
+      "lg": {
+        "value": "24px"
+      },
+      "xl": {
+        "value": "32px"
+      },
+      "display": {
+        "value": "40px"
+      }
+    },
+    "weight": {
+      "regular": {
+        "value": 400
+      },
+      "medium": {
+        "value": 500
+      },
+      "bold": {
+        "value": 700
+      },
+      "extrabold": {
+        "value": 800
+      }
+    }
+  },
+  "space": {
+    "1": {
+      "value": "4px"
+    },
+    "2": {
+      "value": "8px"
+    },
+    "3": {
+      "value": "12px"
+    },
+    "4": {
+      "value": "16px"
+    },
+    "5": {
+      "value": "20px"
+    },
+    "6": {
+      "value": "24px"
+    },
+    "8": {
+      "value": "32px"
+    },
+    "10": {
+      "value": "40px"
+    },
+    "12": {
+      "value": "48px"
+    },
+    "16": {
+      "value": "64px"
+    },
+    "20": {
+      "value": "80px"
+    }
+  },
+  "radius": {
+    "sm": {
+      "value": "4px"
+    },
+    "md": {
+      "value": "8px"
+    },
+    "lg": {
+      "value": "16px"
+    },
+    "pill": {
+      "value": "32px"
+    },
+    "full": {
+      "value": "9999px"
+    }
+  },
+  "shadow": {
+    "card": {
+      "value": "0 1px 2px rgba(25,38,52,0.06)"
+    },
+    "float": {
+      "value": "0 0 20px rgba(25,38,52,0.15)"
+    },
+    "header": {
+      "value": "0 2px 4px rgba(0,38,76,0.08)"
+    }
+  },
+  "size": {
+    "header": {
+      "value": "64px"
+    },
+    "header-mobile": {
+      "value": "56px"
+    },
+    "searchbar": {
+      "value": "60px"
+    },
+    "button": {
+      "value": "40px"
+    },
+    "button-lg": {
+      "value": "48px"
+    },
+    "chip": {
+      "value": "32px"
+    },
+    "slot": {
+      "value": "40px"
+    },
+    "avatar-lg": {
+      "value": "72px"
+    },
+    "avatar-md": {
+      "value": "48px"
+    },
+    "avatar-sm": {
+      "value": "40px"
+    },
+    "content-max": {
+      "value": "1200px"
+    },
+    "sidebar-pro": {
+      "value": "240px"
+    },
+    "touch-target": {
+      "value": "44px"
+    }
+  },
+  "breakpoint": {
+    "sm": {
+      "value": "640px"
+    },
+    "md": {
+      "value": "768px"
+    },
+    "lg": {
+      "value": "1024px"
+    },
+    "xl": {
+      "value": "1280px"
+    }
+  },
+  "motion": {
+    "fast": {
+      "value": "150ms"
+    },
+    "base": {
+      "value": "200ms"
+    },
+    "modal": {
+      "value": "250ms"
+    },
+    "easing": {
+      "value": "cubic-bezier(0.2, 0, 0, 1)"
+    }
+  }
+}
