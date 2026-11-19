@@ -17,6 +17,7 @@ const SPACES = [
     start: { href: '/', label: 'Ouvrir le site patient' },
     features: [
       { label: 'Chercher un soignant par spécialité ou par nom, sur les trois îles', href: '/recherche?q=medecin' },
+      { label: 'Filtrer (disponibilité, langue, paiement, assurance) et voir les soignants sur la carte', href: '/recherche?dispo=3' },
       { label: 'Prendre rendez-vous en ligne, pour soi ou pour un proche', href: `${AMINA}/reserver` },
       { label: 'Déplacer ou annuler un rendez-vous, ajouter au calendrier', href: '/mon-compte/rendez-vous' },
       { label: 'Retrouver ses soignants et reprendre rendez-vous en un clic', href: '/mon-compte/soignants' },

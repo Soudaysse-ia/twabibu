@@ -106,6 +106,28 @@ describe('Booking flow', () => {
     await request(app.getHttpServer()).get('/v1/practitioners/does-not-exist').expect(404);
   });
 
+  it('filters results by language, payment, availability and new patients, with options and map positions', async () => {
+    const get = (qs: string) => request(app.getHttpServer()).get(`/v1/search/practitioners?${qs}`);
+    const all = (await get('').expect(200)).body;
+    const slugs = (body: { items: { slug: string }[] }) => body.items.map((i) => i.slug);
+    assert.ok(all.facets.languages.some((l: { code: string }) => l.code === 'ar'));
+    assert.ok(all.facets.paymentMethods.some((m: { code: string; name: string }) => m.code === 'MVOLA' && m.name === 'MVola'));
+    assert.equal(typeof all.items[0].practice.lat, 'number');
+
+    const arabic = (await get('langues=ar').expect(200)).body;
+    assert.ok(slugs(arabic).includes('amina-said'));
+    assert.ok(!slugs(arabic).includes('ibrahim-mohamed'), 'does not speak Arabic');
+    assert.ok(arabic.total < all.total);
+    assert.deepEqual(arabic.facets, all.facets, 'options do not shrink when one is chosen');
+
+    const soon = (await get('dispo=14&tri=dispo').expect(200)).body;
+    assert.ok(soon.total >= 1 && soon.total <= all.total);
+    assert.ok(soon.items.every((i: { days: { slots: string[] }[]; nextAvailabilityAt: string | null }) => i.days.some((d) => d.slots.length) || i.nextAvailabilityAt));
+    assert.equal((await get('nouveaux=1').expect(200)).body.items.every((i: { acceptsNewPatients: boolean }) => i.acceptsNewPatients), true);
+    assert.equal((await get('paiement=INCONNU').expect(200)).body.total, 0);
+    await get('dispo=5').expect(400);
+  });
+
   it('holds a slot for one visitor, books it, confirms by e-mail, and lets the patient cancel', async () => {
     const search = await request(app.getHttpServer()).get('/v1/search/practitioners?q=pediatre').expect(200);
     const practitioner = search.body.items[0];

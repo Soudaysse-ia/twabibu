@@ -17,6 +17,13 @@ const SearchSchema = z.object({
   lat: z.coerce.number().min(-90).max(90).optional(),
   lng: z.coerce.number().min(-180).max(180).optional(),
   page: z.coerce.number().int().min(1).max(100).default(1),
+  // Filters (SPEC-01 §7), all in the URL so a search can be shared.
+  dispo: z.enum(['0', '3', '7', '14']).optional().transform((v) => (v === undefined ? undefined : Number(v))),
+  langues: z.string().trim().max(200).optional().transform((v) => (v ? v.split(',').map((x) => x.trim()).filter(Boolean).slice(0, 10) : [])),
+  paiement: z.string().trim().max(200).optional().transform((v) => (v ? v.split(',').map((x) => x.trim()).filter(Boolean).slice(0, 10) : [])),
+  assurance: z.string().trim().max(120).optional(),
+  nouveaux: z.literal('1').optional().transform((v) => v === '1'),
+  tri: z.enum(['pertinence', 'dispo', 'distance']).default('pertinence'),
 });
 
 const AvailabilitySchema = z

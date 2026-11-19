@@ -10,7 +10,7 @@ export interface SearchItem {
   verified: boolean;
   acceptsNewPatients: boolean;
   speciality: { slug: string; name: string };
-  practice: { addressLine: string; locality: string; island: string; distanceKm: number | null } | null;
+  practice: { addressLine: string; locality: string; island: string; distanceKm: number | null; lat: number; lng: number } | null;
   languages: string[];
   priceFromKmf: number | null;
   motiveId: string | null;
@@ -19,11 +19,18 @@ export interface SearchItem {
   nextAvailabilityAt: string | null;
 }
 
+export interface SearchFacets {
+  languages: { code: string; name: string }[];
+  paymentMethods: { code: string; name: string }[];
+  insurances: string[];
+}
+
 export interface SearchResult {
   items: SearchItem[];
   total: number;
   page: number;
   pageSize: number;
+  facets: SearchFacets;
 }
 
 export interface Motive {

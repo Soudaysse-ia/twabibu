@@ -260,3 +260,19 @@ Tests automatisés : 1 test d’intégration de déplacement (créneau tenu obli
 ## Écarts et limites
 - On ne peut pas déplacer vers un créneau qui chevauche le rendez-vous actuel.
 - Le back-office (`apps/admin`, port 3200) n’est pas relié depuis `/demo`.
+
+# Douzième lot : filtres de recherche et carte (19 novembre 2026)
+
+Tickets SEARCH-06 et SEARCH-07 (SPEC-01 §7 et §9).
+
+## Ce qui fonctionne
+- **Filtres** sur `/recherche` : boutons rapides « Aujourd’hui », « Sous 3 / 7 / 14 jours », « Nouveaux patients acceptés », et un panneau « Filtres » (tri par pertinence ou prochaine disponibilité, et par distance avec « Autour de moi » ; langues parlées ; moyens de paiement ; assurance acceptée). Tout est dans l’URL (`?dispo=3&langues=ar`) : partageable, restauré au rechargement, retour en page 1. « Effacer les filtres » remet tout à zéro. Sans résultat avec filtres, le message propose de retirer un filtre.
+- **API** `GET /v1/search/practitioners` : paramètres `dispo`, `langues`, `paiement`, `assurance`, `nouveaux`, `tri` ; réponse avec `facets` (options proposées, calculées avant filtrage pour qu’un choix ne vide pas sa propre liste) et la position de chaque cabinet (`practice.lat`, `practice.lng`, ou celle de la localité). 1 test d’intégration.
+- **Carte** (Leaflet 1.9.4, fonds OpenStreetMap) : points numérotés comme les cartes de la liste ; survoler une carte met son point en évidence, cliquer un point fait défiler jusqu’à la carte. Sur ordinateur, colonne de droite qui reste visible ; sur téléphone, bouton « Afficher la carte » (Leaflet n’est chargé qu’à ce moment). Plusieurs soignants à la même adresse (clinique) ont leurs points côte à côte au lieu d’empilés.
+
+Vérifié dans le navigateur à 1280 px et 375 px : 6 résultats et 6 points, survol, filtre « Arabe » (2 résultats), « Sous 3 jours » ajouté à l’URL et conservé au rechargement, carte mobile à la demande, aucune erreur dans la page. Les fonds de carte n’ont pas pu être chargés dans l’environnement de vérification (accès réseau à OpenStreetMap bloqué) : seuls les points et les contrôles ont été vus.
+
+## Écarts et limites
+- Les filtres et le tri par disponibilité sont calculés en mémoire, praticien par praticien : suffisant pour la démo, à revoir (vue matérialisée DATA-02, cache AVAIL-05) quand il y aura des centaines de soignants.
+- Le filtre « Type (soignant / établissement) » n’est pas fait : la recherche ne renvoie que des soignants.
+- Les tuiles viennent du serveur public d’OpenStreetMap, dont la politique d’usage limite le trafic : en production, prendre un fournisseur de tuiles ou un serveur dédié.
