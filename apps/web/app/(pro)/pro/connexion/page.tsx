@@ -31,6 +31,12 @@ export default async function ProSignInPage({ searchParams }: { searchParams: Pr
             </p>
           ) : null}
           <ProSignIn />
+          <p className="text-sm text-text">
+            Pas encore de compte ?{' '}
+            <Link href="/pro/inscription" className="font-medium text-primary hover:underline">
+              Inscrire mon cabinet
+            </Link>
+          </p>
           {isDemo() ? (
             <p className="text-xs text-text-muted">
               Comptes de démonstration (code 000000) : amina.said@demo.twabibu.km (praticienne), secretariat@demo.twabibu.km, direction@demo.twabibu.km.

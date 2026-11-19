@@ -293,3 +293,23 @@ Tests automatisés : 2 tests d’intégration (proches : modification, télépho
 ## Écarts et limites
 - Pas encore de changement d’adresse e-mail (il faudra un code envoyé à la nouvelle adresse), ni d’ajout de téléphone au compte, ni de suppression de compte et d’export des données (ACCOUNT-05).
 - Le partage du dossier d’un proche n’est pas encore proposé.
+
+# Quatorzième lot : inscription des soignants et page « Vous êtes soignant ? » (19 novembre 2026)
+
+Tickets PRO-01 et WEB-03 (SPEC-07 §Inscription).
+
+## Ce qui fonctionne
+- **Page `/pro`** (« Vous êtes soignant ? » dans l’en-tête) : ce que fait Twabibu Pro, les trois étapes (inscription, vérification, mise en ligne), les offres, les questions fréquentes (sans téléconsultation, qui voit le dossier) et deux appels à « Inscrire mon cabinet ».
+- **Inscription `/pro/inscription`** en trois étapes : adresse e-mail professionnelle, code reçu par e-mail, puis le cabinet (soignant en cabinet ou établissement, spécialité, titre, prénom, nom, numéro d’autorisation d’exercer, téléphone du cabinet, nom du cabinet, île puis localité, adresse, conditions d’utilisation). Une adresse qui a déjà un compte est renvoyée vers la connexion. Si le code expire pendant la saisie, les informations restent.
+- **API `POST /v1/auth/signup/practitioner`** : en une transaction, compte `PROFESSIONAL`, structure `PENDING`, praticien `PENDING` non publié (droit de prescrire selon la spécialité), lieu de consultation (position de la localité), membre `OWNER`, agenda par défaut et motifs de départ selon la spécialité ; e-mail de bienvenue ; ligne au journal d’audit ; session ouverte. Le jeton d’inscription ne sert qu’une fois.
+- **Espace Pro** : bandeau sur toutes les pages tant que le dossier n’est pas validé, avec deux liens (« vérifiez vos motifs », « ouvrez vos plages en ligne ») vers les réglages ; bandeau différent si l’équipe demande un complément ou refuse.
+- **Back-office** : le nouveau dossier arrive dans la file de vérification ; la validation publie le profil et passe la structure en « active ».
+- La page de connexion Pro propose « Inscrire mon cabinet » ; la page `/demo` mentionne l’inscription.
+
+Tests automatisés : 1 test d’intégration de bout en bout (téléphone refusé, jeton à usage unique, espace Pro ouvert en responsable avec agenda et motifs, profil introuvable avant validation, présent dans la file, publié et structure active après validation). Vérifié dans le navigateur à 1280 px et 375 px : page `/pro`, inscription complète d’une pédiatre à Ndzuani (conditions non cochées, téléphone invalide, puis succès), bandeau d’attente, motifs dans les réglages, pas de défilement horizontal, aucune erreur dans la page.
+
+## Écarts et limites
+- Pas de dépôt des pièces justificatives (PRO-03, il faut un stockage de fichiers) : la vérification repose sur le numéro d’autorisation et l’appel de confirmation.
+- Pas d’assistant de démarrage en 6 étapes (PRO-02) : les réglages existants servent à préparer l’agenda.
+- Les tarifs ne sont pas affichés : le modèle économique les donne comme hypothèses à valider avec les premiers cabinets. Pas de formulaire « demande de démo ».
+- Un établissement n’inscrit pour l’instant que son premier praticien ; les autres viendront par les invitations (PRO-05).

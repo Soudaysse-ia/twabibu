@@ -32,7 +32,18 @@ function Field({ id, label, hint, error, children }: { id: string; label: string
  * Sign-in and sign-up with an e-mail address and a 6-digit code sent by e-mail (ADR-016). No phone number,
  * no password. Calls `onDone` with the account. New addresses go through a short identity form first.
  */
-export function EmailOtpForm({ onDone, title = 'Identifiez-vous', allowSignup = true }: { onDone: (me: Me) => void; title?: string; allowSignup?: boolean }) {
+export function EmailOtpForm({
+  onDone,
+  title = 'Identifiez-vous',
+  allowSignup = true,
+  noAccountMessage = 'Cette adresse n’est associée à aucun compte professionnel. Contactez Twabibu pour inscrire votre structure.',
+}: {
+  onDone: (me: Me) => void;
+  title?: string;
+  allowSignup?: boolean;
+  /** Shown when sign-up is off and the address has no account. */
+  noAccountMessage?: string;
+}) {
   const uid = useId();
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
@@ -83,7 +94,7 @@ export function EmailOtpForm({ onDone, title = 'Identifiez-vous', allowSignup = 
       });
       if (res.status === 'LOGGED_IN') await finish();
       else if (!allowSignup) {
-        setError('Cette adresse n’est associée à aucun compte professionnel. Contactez Twabibu pour inscrire votre cabinet.');
+        setError(noAccountMessage);
         setStep('email');
       } else {
         setSignupToken(res.signupToken);

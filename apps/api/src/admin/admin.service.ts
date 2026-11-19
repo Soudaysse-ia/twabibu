@@ -136,6 +136,8 @@ export class AdminService {
             : { verificationStatus: input.decision, ...(input.decision === 'REJECTED' ? { isPublished: false, verifiedAt: null } : {}) },
       }),
       this.prisma.verificationDocument.updateMany({ where: { practitionerId: id, status: { in: ['PENDING', 'UNVERIFIED', 'CHANGES_REQUESTED'] } }, data: { status: input.decision, reviewedById: admin.userId, reviewNote: input.message ?? null } }),
+      // A practice created by an online sign-up waits for its first validated practitioner.
+      ...(input.decision === 'VERIFIED' ? [this.prisma.organization.updateMany({ where: { id: p.organizationId, status: 'PENDING' }, data: { status: 'ACTIVE' } })] : []),
     ]);
     await this.audit.log({
       actorUserId: admin.userId,

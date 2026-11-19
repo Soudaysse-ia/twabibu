@@ -128,6 +128,75 @@ describe('Back-office (SPEC-11)', () => {
     assert.match(csv.text, /^date;acteur;action/);
   });
 
+  it('signs a practitioner up online, keeps the profile hidden until the back-office validates it', async () => {
+    const email = `inscription-${stamp}@test.twabibu.km`;
+    const speciality = await prisma.speciality.findUniqueOrThrow({ where: { slug: 'medecin-generaliste' } });
+    const locality = await prisma.locality.findFirstOrThrow({ where: { slug: 'moroni' } });
+    cleanup.push(async () => {
+      const user = await prisma.user.findUnique({ where: { email }, include: { memberships: true } });
+      const orgIds = user?.memberships.map((m) => m.organizationId) ?? [];
+      const practitioners = await prisma.practitioner.findMany({ where: { organizationId: { in: orgIds } }, select: { id: true } });
+      await prisma.agenda.deleteMany({ where: { practitionerId: { in: practitioners.map((p) => p.id) } } });
+      await prisma.membership.deleteMany({ where: { organizationId: { in: orgIds } } });
+      await prisma.practitioner.deleteMany({ where: { organizationId: { in: orgIds } } });
+      await prisma.practice.deleteMany({ where: { organizationId: { in: orgIds } } });
+      await prisma.organization.deleteMany({ where: { id: { in: orgIds } } });
+      await prisma.notification.deleteMany({ where: { recipient: email } });
+      await prisma.otpCode.deleteMany({ where: { recipient: email } });
+      await prisma.user.deleteMany({ where: { email } });
+    });
+
+    const doctor = request.agent(app.getHttpServer());
+    await doctor.post('/v1/auth/otp/request').send({ email, purpose: 'SIGNUP' }).expect(200);
+    const verify = (await doctor.post('/v1/auth/otp/verify').send({ email, purpose: 'SIGNUP', code: '000000' }).expect(200)).body;
+    assert.equal(verify.status, 'SIGNUP_REQUIRED');
+    const body = {
+      signupToken: verify.signupToken,
+      kind: 'INDEPENDENT',
+      specialityId: speciality.id,
+      title: 'DR',
+      firstName: 'Saïd',
+      lastName: `Inscrit${stamp}`,
+      licenseNumber: 'KM-2026-0042',
+      phone: '773 12 34',
+      organizationName: `Cabinet du Dr Inscrit ${stamp}`,
+      addressLine: 'Route de la Corniche',
+      localityId: locality.id,
+      acceptTerms: true,
+    };
+    const bad = await doctor.post('/v1/auth/signup/practitioner').send({ ...body, phone: '123 45' }).expect(400);
+    assert.equal(bad.body.details.field, 'phone');
+    const created = (await doctor.post('/v1/auth/signup/practitioner').send(body).expect(201)).body;
+    // The token is used up: no second account with the same code.
+    const again = await request(app.getHttpServer()).post('/v1/auth/signup/practitioner').send(body).expect(422);
+    assert.equal(again.body.code, 'OTP_EXPIRED');
+
+    // Straight into the Pro space, as owner, with an agenda and starter motives.
+    const me = (await doctor.get('/v1/pro/me').expect(200)).body;
+    assert.equal(me.memberships[0].organizationId, created.organizationId);
+    assert.equal(me.memberships[0].role, 'OWNER');
+    const agendas = (await doctor.get(`/v1/pro/orgs/${created.organizationId}/agendas`).expect(200)).body;
+    assert.equal(agendas.length, 1);
+    assert.deepEqual(agendas[0].motives.map((m: { name: string }) => m.name), ['Première consultation', 'Consultation de suivi']);
+    const practitioner = await prisma.practitioner.findFirstOrThrow({ where: { organizationId: created.organizationId } });
+    assert.equal(practitioner.verificationStatus, 'PENDING');
+    assert.equal(practitioner.canPrescribe, speciality.canPrescribe);
+    assert.ok(await prisma.notification.findFirst({ where: { recipient: email, template: 'proWelcome' } }));
+
+    // Hidden from patients until validated.
+    await request(app.getHttpServer()).get(`/v1/practitioners/${practitioner.slug}`).expect(404);
+    const admin = await login(SUPER);
+    await admin.post('/v1/admin/auth/mfa/verify').send({ code: '000000' }).expect(200);
+    const queue = (await admin.get('/v1/admin/verifications').expect(200)).body;
+    assert.ok(queue.some((q: { id: string }) => q.id === practitioner.id), 'the new file waits in the verification queue');
+    await admin
+      .post(`/v1/admin/practitioners/${practitioner.id}/decision`)
+      .send({ decision: 'VERIFIED', checklist: { documentsReadable: true, nameMatches: true, licenseValid: true, confirmationCall: true } })
+      .expect(200);
+    await request(app.getHttpServer()).get(`/v1/practitioners/${practitioner.slug}`).expect(200);
+    assert.equal((await prisma.organization.findUniqueOrThrow({ where: { id: created.organizationId } })).status, 'ACTIVE');
+  });
+
   it('never reaches clinical data', async () => {
     const admin = await login(SUPER);
     await admin.post('/v1/admin/auth/mfa/verify').send({ code: '000000' }).expect(200);

@@ -5,6 +5,7 @@ import { Logo } from '@twabibu/ui';
 import { ProProvider } from '@/components/pro/ProContext';
 import { ProLogout } from '@/components/pro/ProLogout';
 import { ProNav } from '@/components/pro/ProNav';
+import { VerificationBanner } from '@/components/pro/VerificationBanner';
 import { apiGet } from '@/lib/api-server';
 import type { ProMe } from '@/lib/pro-types';
 
@@ -43,6 +44,7 @@ export default async function ProLayout({ children }: { children: React.ReactNod
         <div className="flex flex-1">
           <ProNav />
           <main id="contenu" className="min-w-0 flex-1 pb-20 lg:pb-0">
+            <VerificationBanner status={membership.verificationStatus} />
             {children}
           </main>
         </div>

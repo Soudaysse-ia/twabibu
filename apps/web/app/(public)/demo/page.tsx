@@ -41,6 +41,8 @@ const SPACES = [
       { label: 'Patients et dossier médical : antécédents, allergies, constantes, consultations', href: '/pro/app/patients' },
       { label: 'Consultation et ordonnance numérique avec alertes (allergie, doublon)', href: '/pro/app' },
       { label: 'Motifs, horaires en ligne, absences et rappels', href: '/pro/app/reglages' },
+      { label: 'Inscrire un nouveau cabinet en ligne (vérifié ensuite dans le back-office)', href: '/pro/inscription' },
+      { label: 'Page « Vous êtes soignant ? »', href: '/pro' },
     ],
   },
   {
