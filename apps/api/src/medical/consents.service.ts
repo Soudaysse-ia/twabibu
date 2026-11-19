@@ -23,7 +23,8 @@ export class ConsentsService {
       // Practices where the patient has a file: the ones they can share with.
       this.prisma.patientRecord.findMany({ where: { patientProfileId: user.patientProfileId!, relativeId: null, deletedAt: null }, include: { organization: { select: { id: true, name: true } } } }),
     ]);
-    return practices.map((p) => ({
+    const unique = [...new Map(practices.map((p) => [p.organization.id, p])).values()];
+    return unique.map((p) => ({
       organizationId: p.organization.id,
       organizationName: p.organization.name,
       shared: consents.some((c) => c.organizationId === p.organization.id),

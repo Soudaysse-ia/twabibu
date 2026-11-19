@@ -34,6 +34,9 @@ export default async function MyPrescriptionsPage() {
           <Link href="/mon-compte/commandes" className="text-primary hover:underline">
             Mes commandes
           </Link>
+          <Link href="/mon-compte/dossier" className="text-primary hover:underline">
+            Partage de mon dossier
+          </Link>
         </div>
       </div>
       {items.length === 0 ? (
