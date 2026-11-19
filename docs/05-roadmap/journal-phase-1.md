@@ -204,5 +204,5 @@ Tests automatisés : 112 au total (API 74, dont 3 nouveaux : aucune donnée méd
 - Changer la recherche après « Voir plus » aurait mélangé deux pages de résultats.
 
 ## Écarts et limites
-- Un rendez-vous du jour déjà passé mais non clôturé reste compté « à venir » tant que le praticien ne l’a pas marqué terminé ou absent.
+- ~~Un rendez-vous du jour déjà passé mais non clôturé reste compté « à venir »~~ Corrigé le 19/11/2026 : un rendez-vous terminé à l’horaire mais jamais clôturé n’est plus compté « à venir » ; il porte l’étiquette « À clôturer » et le chiffre du jour l’indique (« 1 à clôturer »). Un patient arrivé ou en consultation reste « en cours » même après l’heure prévue (`apps/api/src/pro/day-summary.ts`, 4 tests).
 - L’accueil ne montre pas les alertes médicales (allergies) des patients du jour : elles restent dans le dossier et dans l’écran de consultation, pour ne pas mettre de données de santé sous les yeux du secrétariat.

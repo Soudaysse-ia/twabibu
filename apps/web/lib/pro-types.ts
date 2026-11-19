@@ -131,12 +131,15 @@ export interface ProDashboard {
     total: number;
     done: number;
     remaining: number;
+    /** Over but never marked done or no-show. */
+    toClose: number;
     noShow: number;
     items: {
       id: string;
       startsAt: string;
       endsAt: string;
       status: AppointmentStatus;
+      toClose: boolean;
       source: string;
       motive: string;
       color: string;

@@ -4,10 +4,11 @@ import { addDaysToDateKey, searchKey, toDateKey, zonedToUtc } from '@twabibu/uti
 import { practitionerName } from '../booking/appointment-view.js';
 import { ApiException } from '../common/api-exception.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { OPEN_STATUSES, summarizeDay } from './day-summary.js';
 import { canViewAgenda, type MembershipContext } from './permissions.js';
 
 export const PATIENTS_PAGE_SIZE = 30;
-const ACTIVE = ['CONFIRMED', 'PENDING_VALIDATION', 'ARRIVED', 'IN_CONSULTATION'] as const;
+const ACTIVE = OPEN_STATUSES;
 const CANCELLED = ['CANCELLED_BY_PATIENT', 'CANCELLED_BY_PRACTICE'] as const;
 
 const ageOf = (birthDate: Date | null, now = new Date()) => {
@@ -62,20 +63,22 @@ export class PracticeOverviewService {
     ]);
     const total30 = last30.filter((g) => !(CANCELLED as readonly string[]).includes(g.status)).reduce((s, g) => s + g._count, 0);
     const sum = (f: (g: (typeof last30)[number]) => boolean) => last30.filter(f).reduce((s, g) => s + g._count, 0);
-    const remaining = todayRows.filter((a) => (ACTIVE as readonly string[]).includes(a.status));
-    const next = remaining.find((a) => a.endsAt > now) ?? null;
+    const day = summarizeDay(todayRows, now);
+    const toClose = new Set(day.toClose);
     return {
       date: today,
       today: {
         total: todayRows.length,
         done: todayRows.filter((a) => a.status === 'DONE').length,
-        remaining: remaining.length,
+        remaining: day.remaining,
+        toClose: toClose.size,
         noShow: todayRows.filter((a) => a.status === 'NO_SHOW').length,
         items: todayRows.map((a) => ({
           id: a.id,
           startsAt: a.startsAt.toISOString(),
           endsAt: a.endsAt.toISOString(),
           status: a.status,
+          toClose: toClose.has(a.id),
           source: a.source,
           motive: a.motive.name,
           color: a.motive.color,
@@ -84,7 +87,7 @@ export class PracticeOverviewService {
           patient: { id: a.patientRecord.id, name: `${a.patientRecord.firstName} ${a.patientRecord.lastName}`, age: ageOf(a.patientRecord.birthDate, now), noShowCount: a.patientRecord.noShowCount },
         })),
       },
-      nextAppointmentId: next?.id ?? null,
+      nextAppointmentId: day.next?.id ?? null,
       pending: pending.map((a) => ({ id: a.id, startsAt: a.startsAt.toISOString(), motive: a.motive.name, patient: { id: a.patientRecord.id, name: `${a.patientRecord.firstName} ${a.patientRecord.lastName}` } })),
       nextSevenDays: week,
       last30Days: { appointments: total30, noShows: sum((g) => g.status === 'NO_SHOW'), online: sum((g) => g.source === 'ONLINE' && !(CANCELLED as readonly string[]).includes(g.status)) },
