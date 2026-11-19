@@ -625,7 +625,9 @@ async function main() {
     holidays: await prisma.holiday.count(), drugs: await prisma.drug.count(),
   };
   console.log('Référentiels :', counts);
-  if (process.env.NODE_ENV === 'production') {
+  // The hosted demo (APP_ENV=staging) runs a production build with demo data; real production never gets any (ADR-020).
+  const realProduction = process.env.APP_ENV === 'production' || (process.env.NODE_ENV === 'production' && process.env.APP_ENV !== 'staging');
+  if (realProduction) {
     console.log('Production : aucune donnée de démonstration.');
     return;
   }

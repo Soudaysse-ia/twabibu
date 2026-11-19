@@ -84,6 +84,7 @@ pnpm --filter @twabibu/web dev     # site sur :3100
 - Référentiels (spécialités, localités, jours fériés, médicaments) : gérés dans le back-office (ADR-019). Le seed ne crée que les lignes manquantes ; ne pas compter sur `pnpm db:seed` pour corriger une base existante.
 - Rappels de rendez-vous : tâche BullMQ `reminder-scheduler` toutes les 15 min (file `reminders`), logique dans `apps/api/src/notifications/reminder-rules.ts` (testée avec une horloge simulée). Désactivée en `NODE_ENV=test`.
 - Version de démonstration hébergée : construire le site avec `NEXT_PUBLIC_DEMO_MODE=true` (page `/demo`, bandeau, comptes affichés sur les pages de connexion) et l’API avec `EMAIL_PROVIDER=fake` et `SMS_PROVIDER=fake`. En développement, ces aides sont toujours visibles. Jamais en production.
+- Mise en production (ADR-020) : images `infra/docker/*.Dockerfile`, `infra/docker/docker-compose.prod.yml`, `infra/caddy/Caddyfile`, scripts serveur `infra/scripts/` (déploiement, retour arrière, sauvegarde, restauration), workflow `.github/workflows/deploy.yml` (pré-production sur `main`, production sur tag `vX.Y.Z`). Procédures dans `docs/03-architecture/runbooks/`. Une migration doit toujours rester compatible avec la version précédente (le retour arrière ne la défait pas).
 - Journaux de livraison : `docs/05-roadmap/journal-phase-0.md`, `journal-phase-1.md`.
 
 ## 7. Comment réaliser un ticket

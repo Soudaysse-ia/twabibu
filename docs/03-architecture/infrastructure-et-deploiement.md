@@ -1,5 +1,7 @@
 # Infrastructure, environnements et déploiement
 
+> **État au 19/11/2026 (ADR-020)** : images, Compose de production, Caddy, sauvegardes, installation du serveur et workflow de déploiement sont dans le dépôt (`infra/`, `.github/workflows/deploy.yml`). Écarts avec ce qui suit : pas de `worker` séparé (les tâches BullMQ tournent dans l’API), pas encore de stockage objet ni de supervision, sauvegarde par `pg_dump` quotidien au lieu de pgBackRest, pas d’environnement `preview`. Procédure d’installation : `runbooks/mise-en-production-hetzner.md`.
+
 ## 1. Choix
 **Un VPS Docker Compose par environnement** (staging, production), hébergé en Union européenne (Hetzner Falkenstein/Helsinki ou OVH Gravelines), derrière Cloudflare. Raisons : coût (≈ 30–60 €/mois en prod au démarrage), maîtrise complète des données de santé, simplicité pour une petite équipe. Évolution possible vers Kubernetes managé ou des services managés (Postgres managé) quand la charge le justifiera (> 500 soignants).
 

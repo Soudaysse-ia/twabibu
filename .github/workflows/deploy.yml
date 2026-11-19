@@ -1,0 +1,114 @@
+# Deployment (ADR-009, ADR-020). Runbook: docs/03-architecture/runbooks/deploiement.md
+# - push on main      -> images tagged sha-<commit> and staging, deployed to the staging server (hosted demo)
+# - tag vX.Y.Z        -> images tagged vX.Y.Z, deployed to production after approval (GitHub environment « production »)
+# - manual (Actions)  -> redeploy or roll back any existing tag to either environment
+# Deployment jobs only run once the repository variable DEPLOY_ENABLED is set to true (servers ready).
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: staging ou production
+        type: choice
+        options: [staging, production]
+        required: true
+      tag:
+        description: Tag d’image existant (ex. v0.2.0 ou sha-1a2b3c4)
+        required: true
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io/soudaysse-ia
+
+jobs:
+  images:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions: { contents: read, packages: write }
+    strategy:
+      matrix:
+        app: [api, web, admin]
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      environment: ${{ steps.tag.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: tag
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = tag ]; then
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"; echo "environment=production" >> "$GITHUB_OUTPUT"
+            echo "extra=" >> "$GITHUB_OUTPUT"; echo "demo=false" >> "$GITHUB_OUTPUT"; echo "site=${{ vars.PRODUCTION_SITE_URL || 'https://twabibu.km' }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"; echo "environment=staging" >> "$GITHUB_OUTPUT"
+            echo "extra=staging" >> "$GITHUB_OUTPUT"; echo "demo=true" >> "$GITHUB_OUTPUT"; echo "site=${{ vars.STAGING_SITE_URL || 'https://staging.twabibu.km' }}" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with: { registry: ghcr.io, username: '${{ github.actor }}', password: '${{ secrets.GITHUB_TOKEN }}' }
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/${{ matrix.app == 'api' && 'api' || 'next' }}.Dockerfile
+          build-args: |
+            APP=${{ matrix.app }}
+            NEXT_PUBLIC_SITE_URL=${{ steps.tag.outputs.site }}
+            NEXT_PUBLIC_DEMO_MODE=${{ matrix.app == 'web' && steps.tag.outputs.demo || 'false' }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/twabibu-${{ matrix.app }}:${{ steps.tag.outputs.tag }}
+            ${{ steps.tag.outputs.extra && format('{0}/twabibu-{1}:{2}', env.REGISTRY, matrix.app, steps.tag.outputs.extra) || '' }}
+          labels: org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.app }}-${{ steps.tag.outputs.environment }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}-${{ steps.tag.outputs.environment }}
+
+  deploy:
+    needs: [images]
+    if: always() && vars.DEPLOY_ENABLED == 'true' && (needs.images.result == 'success' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions: { contents: read, packages: read }
+    environment:
+      name: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || needs.images.outputs.environment }}
+      url: ${{ vars.SITE_URL }}
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || needs.images.outputs.tag }}
+    steps:
+      - name: Check the tag
+        run: |
+          [[ "$TAG" =~ ^(v[0-9]+\.[0-9]+\.[0-9]+|sha-[0-9a-f]{7}|staging)$ ]] || { echo "Invalid tag: $TAG"; exit 1; }
+      - uses: actions/checkout@v4
+      - name: SSH key and known host
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+      - name: Copy compose file, Caddyfile and scripts
+        run: |
+          scp -i ~/.ssh/id_deploy infra/docker/docker-compose.prod.yml "deploy@${{ secrets.DEPLOY_HOST }}:/srv/twabibu/docker-compose.yml"
+          scp -i ~/.ssh/id_deploy infra/caddy/Caddyfile "deploy@${{ secrets.DEPLOY_HOST }}:/srv/twabibu/Caddyfile"
+          scp -i ~/.ssh/id_deploy infra/scripts/*.sh "deploy@${{ secrets.DEPLOY_HOST }}:/srv/twabibu/scripts/"
+      - name: Deploy ${{ env.TAG }}
+        env:
+          HOST: deploy@${{ secrets.DEPLOY_HOST }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # The short-lived job token only lets the server pull this release's images; it is removed right after.
+          ssh -i ~/.ssh/id_deploy "$HOST" "docker login ghcr.io -u '${{ github.actor }}' --password-stdin > /dev/null" <<< "$TOKEN"
+          status=0
+          ssh -i ~/.ssh/id_deploy "$HOST" "/srv/twabibu/scripts/deploy.sh '${TAG}'" || status=$?
+          ssh -i ~/.ssh/id_deploy "$HOST" "docker logout ghcr.io > /dev/null" || true
+          exit $status
+      - name: Public check
+        if: vars.SITE_URL != ''
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS "${{ vars.SITE_URL }}/api/ready"; then exit 0; fi
+            sleep 10
+          done
+          exit 1
