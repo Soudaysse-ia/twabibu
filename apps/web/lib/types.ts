@@ -91,6 +91,8 @@ export interface Me {
 
 export interface PatientAppointment {
   id: string;
+  agendaId: string;
+  motiveId: string;
   status: 'PENDING_VALIDATION' | 'CONFIRMED' | 'ARRIVED' | 'IN_CONSULTATION' | 'DONE' | 'NO_SHOW' | 'CANCELLED_BY_PATIENT' | 'CANCELLED_BY_PRACTICE';
   startsAt: string;
   endsAt: string;
@@ -99,7 +101,7 @@ export interface PatientAppointment {
   instructions: string | null;
   forName: string;
   forRelative: boolean;
-  practitioner: { name: string; speciality: string; url: string };
+  practitioner: { name: string; slug: string; speciality: string; url: string };
   practice: { name: string; addressLine: string; locality: string; island: string; phone: string | null; lat: number | null; lng: number | null };
   cancellation: { allowed: boolean; deadline: string };
 }

@@ -105,11 +105,16 @@ export function AppointmentCard({ appointment: a }: { appointment: PatientAppoin
         ) : (
           <div className="flex flex-wrap gap-2">
             {a.cancellation.allowed ? (
-              <Button variant="secondary" size="sm" onClick={() => setConfirming(true)}>
-                Annuler le rendez-vous
-              </Button>
+              <>
+                <Link href={`/mon-compte/rendez-vous/${a.id}/deplacer`} className={buttonClasses({ variant: 'primary', size: 'sm' })}>
+                  Déplacer le rendez-vous
+                </Link>
+                <Button variant="secondary" size="sm" onClick={() => setConfirming(true)}>
+                  Annuler le rendez-vous
+                </Button>
+              </>
             ) : (
-              <p className="text-sm text-text-muted">Annulation en ligne impossible moins de 24 h avant. Appelez le cabinet.</p>
+              <p className="text-sm text-text-muted">Le délai pour déplacer ou annuler en ligne est dépassé. Appelez le cabinet.</p>
             )}
           </div>
         )
