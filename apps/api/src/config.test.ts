@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { appEnvFrom, demoAdminsAllowed, demoDataAllowed } from './common/environment.js';
 import { loadConfig } from './config.js';
 
 const base = { DATABASE_URL: 'postgresql://x@localhost/x' };
@@ -19,5 +20,14 @@ describe('Configuration (ADR-020)', () => {
 
   it('still requires real secrets in any production build', () => {
     assert.throws(() => loadConfig({ ...base, NODE_ENV: 'production', APP_ENV: 'staging' }), /ENCRYPTION_KEY|SESSION_SECRET/);
+  });
+
+  it('keeps demo data off production and shared back-office accounts off everything but a developer machine', () => {
+    assert.equal(appEnvFrom({ NODE_ENV: 'development' }), 'local');
+    assert.equal(appEnvFrom({ NODE_ENV: 'production' }), 'production', 'a production build without APP_ENV is treated as production');
+    assert.equal(appEnvFrom({ NODE_ENV: 'production', APP_ENV: 'staging' }), 'staging');
+    assert.equal(appEnvFrom({ NODE_ENV: 'production', APP_ENV: 'demo' }), 'production', 'an unknown value is not trusted');
+    assert.deepEqual(['local', 'staging', 'production'].map((e) => demoDataAllowed(e as 'local')), [true, true, false]);
+    assert.deepEqual(['local', 'staging', 'production'].map((e) => demoAdminsAllowed(e as 'local')), [true, false, false]);
   });
 });
