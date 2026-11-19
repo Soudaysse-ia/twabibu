@@ -313,3 +313,22 @@ Tests automatisés : 1 test d’intégration de bout en bout (téléphone refus�
 - Pas d’assistant de démarrage en 6 étapes (PRO-02) : les réglages existants servent à préparer l’agenda.
 - Les tarifs ne sont pas affichés : le modèle économique les donne comme hypothèses à valider avec les premiers cabinets. Pas de formulaire « demande de démo ».
 - Un établissement n’inscrit pour l’instant que son premier praticien ; les autres viendront par les invitations (PRO-05).
+
+# Quinzième lot : parcours de bout en bout (19 novembre 2026)
+
+Ticket QA-01 (parcours de `docs/01-produit/personas-et-parcours.md`), recommandé avant les cabinets pilotes.
+
+## Ce qui fonctionne
+- **Playwright** (`apps/web/e2e`, `pnpm --filter @twabibu/web e2e`) sur les données de démo, l’un après l’autre (les parcours partagent les agendas de démo) :
+  - **P1** (ordinateur et téléphone) : recherche « généraliste » à Moroni, profil de Dr Amina Saïd, motif, premier créneau, inscription par e-mail et code, rendez-vous pour un nouveau proche, rendez-vous et proche retrouvés dans « Mon compte » ;
+  - **P2** : réservation à quelques jours, déplacement vers un autre horaire, puis annulation ;
+  - **P3 + P6** : inscription d’une pédiatre, bandeau d’attente, validation dans le back-office (code e-mail, second facteur, contrôles), profil public, bandeau disparu ;
+  - **P7** : rendez-vous de Mariama Houmadi préparé par l’API Pro, synthèse avec l’allergie aux pénicillines, amoxicilline bloquée (alerte et justification exigée), paracétamol prescrit, ordonnance signée.
+- Les limites de demande de code des comptes de démo sont remises à zéro avant chaque passage (`e2e/global-setup.ts`, base locale ou CI uniquement).
+- **CI** : nouveau job « Parcours de bout en bout » (Postgres et Redis, migrations, seed, API, site et back-office démarrés, Chromium) ; captures et journaux joints en cas d’échec.
+
+Vérifié : 5 tests verts en environ 15 s, deux passages de suite sur la même base.
+
+## Écarts et limites
+- Restent à écrire : P4 (journée du secrétariat dans l’agenda), P5 (absence et rendez-vous touchés), P8 (ordonnance envoyée à une pharmacie, réponse et délivrance).
+- Les parcours ne vérifient pas encore les e-mails envoyés (lisibles par `GET /v1/dev/messages`).

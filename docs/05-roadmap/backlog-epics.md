@@ -78,7 +78,7 @@ AVAIL-01 ☑ · AVAIL-02 ☑ · AVAIL-03 ☑ · AVAIL-04 ☑ · AVAIL-05 ☐ (pa
 | ☐ SEC-02 | Tests d'autorisation systématiques (matrice SPEC-07) + tests IDOR | M |
 | ☐ SEC-03 | En-têtes de sécurité, CSP, cookies, CSRF, audit `pnpm audit` en CI | S |
 | ☐ SEC-04 | Revue de sécurité externe avant lancement + corrections | L |
-| ☐ QA-01 | Playwright : parcours P1–P6, desktop + mobile, données seed | L |
+| ◐ QA-01 | Playwright : parcours P1–P6, desktop + mobile, données seed — fait le 19/11/2026 : P1 (ordinateur et téléphone), P2, P3 + P6, P7, job CI « Parcours de bout en bout » ; restent P4 (secrétariat), P5 (absence), P8 (ordonnance → pharmacie) | L |
 | ☐ QA-02 | Audit accessibilité (axe + manuel lecteur d'écran) et corrections | M |
 | ☐ QA-03 | Budget performance + tests Lighthouse CI (3G) | S |
 | ☐ LEGAL-01 | CGU patients, CGV soignants, confidentialité, mentions légales, consultation juridique | M |

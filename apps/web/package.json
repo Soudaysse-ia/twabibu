@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start --port 3100",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@twabibu/availability": "workspace:*",
@@ -26,6 +27,7 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "^4.3.5",
     "@types/leaflet": "1.9.20",
     "@types/node": "^24.0.0",
