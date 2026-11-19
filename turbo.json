@@ -1,9 +1,27 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
-    "build": { "dependsOn": ["^build"], "outputs": ["dist/**", ".next/**", "!.next/cache/**", "theme.css", "src/generated/**"] },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "theme.css", "src/generated/**"]
+    },
     "typecheck": { "dependsOn": ["^build"] },
-    "test": { "dependsOn": ["^build"] },
+    "test": {
+      "dependsOn": ["^build"],
+      "env": [
+        "NODE_ENV",
+        "DATABASE_URL",
+        "REDIS_URL",
+        "APP_URL",
+        "API_PORT",
+        "DEFAULT_TIMEZONE",
+        "SMS_PROVIDER",
+        "EMAIL_PROVIDER",
+        "EMAIL_FROM",
+        "SESSION_SECRET",
+        "ENCRYPTION_KEY"
+      ]
+    },
     "dev": { "dependsOn": ["^build"], "cache": false, "persistent": true }
   }
 }
