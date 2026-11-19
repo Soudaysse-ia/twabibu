@@ -216,6 +216,8 @@ Ticket AGENDA-07 (SPEC-05 §Règles 6). Avant ce lot, un cabinet en validation m
 - **Messages au patient** (e-mail, SMS de secours) : « Votre demande est acceptée » avec les détails du rendez-vous, ou « Votre demande n’a pas été acceptée » avec un lien vers la page du soignant pour choisir un autre créneau. Les deux SMS tiennent en 160 caractères GSM-7.
 - **Historique** : un refus est inscrit « Demande refusée » (`REFUSED`), distinct d’une annulation.
 - **Accueil** : chaque demande de « Demandes à valider » ouvre l’agenda sur ce rendez-vous (`/pro/app/agenda?rdv=<id>`).
+- **Vue mois de l’agenda** (bouton « Mois ») : pour chaque jour, le nombre de rendez-vous, les demandes à valider, une barre de remplissage des plages en ligne (minutes réservées ÷ minutes ouvertes), le jour férié et les absences ; un clic ouvre la vue jour. Un seul appel à l’API (31 jours au plus). Logique dans `apps/web/lib/agenda-month.ts` (3 tests).
+- **Démonstration** : le Dr Amina Saïd a désormais un rendez-vous ce matin non clôturé et deux demandes en ligne à valider (nouvelle base uniquement : `pnpm db:seed` ne recrée pas les rendez-vous d’une base existante).
 - **Bouton « danger »** dans `packages/ui` : les boutons « Confirmer le refus » et « Confirmer l’annulation » (tiroir Pro et compte patient) s’affichaient en bleu, le rouge ajouté par-dessus étant écrasé par la couleur du bouton.
 
 Tests automatisés : tous passent (1 test d’intégration ajouté : acceptation, refus, messages, historique ; 2 modèles SMS ajoutés au test de longueur). Lint, typecheck et build passent. Vérifié dans le navigateur : accueil et tiroir à 1280 px, tiroir et formulaire de refus à 375 px, e-mail « demande acceptée » envoyé (fournisseur factice).
