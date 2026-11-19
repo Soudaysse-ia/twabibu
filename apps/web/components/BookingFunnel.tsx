@@ -55,6 +55,9 @@ export function BookingFunnel({ profile, initialMe, initialMotiveId, initialSlot
   const [relative, setRelative] = useState({ firstName: '', lastName: '', birthDate: '', relationship: 'ENFANT' });
   const [accepted, setAccepted] = useState(false);
   const [message, setMessage] = useState('');
+  // Medical record sharing (SPEC-13): asked only when booking for oneself, unticked by default.
+  const [shareRecord, setShareRecord] = useState(false);
+  const [alreadyShared, setAlreadyShared] = useState(false);
   const [booked, setBooked] = useState<PatientAppointment | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -82,6 +85,13 @@ export function BookingFunnel({ profile, initialMe, initialMotiveId, initialSlot
   useEffect(() => {
     headingRef.current?.focus();
   }, [step]);
+
+  useEffect(() => {
+    if (step !== 'consignes' || person?.kind !== 'me') return;
+    api<{ organizationSlug: string; shared: boolean }[]>('/v1/me/record/consents')
+      .then((list) => setAlreadyShared(list.some((c) => c.organizationSlug === profile.organization.slug && c.shared)))
+      .catch(() => setAlreadyShared(false));
+  }, [step, person, profile.organization.slug]);
 
   const today = useMemo(() => toDateKey(new Date()), []);
   const horizonEnd = addDaysToDateKey(today, profile.agenda?.bookingHorizonDays ?? 90);
@@ -176,6 +186,7 @@ export function BookingFunnel({ profile, initialMe, initialMotiveId, initialSlot
           patientMessage: message.trim() || undefined,
           relativeId: person.kind === 'relative' ? person.id : undefined,
           newRelative: person.kind === 'new' ? relative : undefined,
+          shareRecord: person.kind === 'me' && !alreadyShared && shareRecord,
         },
       });
       setBooked(appointment);
@@ -418,6 +429,23 @@ export function BookingFunnel({ profile, initialMe, initialMotiveId, initialSlot
               <input type="checkbox" className="mt-1 size-4 accent-primary" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
               J’ai lu et j’accepte les consignes du cabinet.
             </label>
+            {person?.kind === 'me' && !alreadyShared ? (
+              <div className="flex flex-col gap-1">
+                <label className="flex gap-3 text-sm text-text">
+                  <input type="checkbox" className="mt-1 size-4 accent-primary" checked={shareRecord} onChange={(e) => setShareRecord(e.target.checked)} />
+                  <span>
+                    Autoriser {profile.organization.name} à voir mon dossier médical complet (facultatif)
+                    <span className="mt-0.5 block text-xs text-text-muted">
+                      Ses soignants verront vos antécédents, allergies et traitements notés par vos autres médecins, jamais le secrétariat. Vous pouvez retirer cet accès à tout moment dans{' '}
+                      <Link href="/mon-compte/dossier" className="text-primary underline">
+                        Partage de mon dossier
+                      </Link>
+                      .
+                    </span>
+                  </span>
+                </label>
+              </div>
+            ) : null}
             <label className="flex flex-col gap-1.5 text-sm font-medium text-ink">
               Message pour le cabinet (facultatif)
               <textarea

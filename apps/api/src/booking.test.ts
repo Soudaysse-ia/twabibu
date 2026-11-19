@@ -37,6 +37,7 @@ describe('Booking flow', () => {
       const users = await prisma.user.findMany({ where: { email: { in: emails } }, include: { patientProfile: true } });
       const profileIds = users.map((u) => u.patientProfile?.id).filter((id): id is string => !!id);
       await prisma.appointment.deleteMany({ where: { patientProfileId: { in: profileIds } } });
+      await prisma.medicalRecord.deleteMany({ where: { patientProfileId: { in: profileIds } } });
       await prisma.patientRecord.deleteMany({ where: { patientProfileId: { in: profileIds } } });
       await prisma.user.deleteMany({ where: { id: { in: users.map((u) => u.id) } } });
       await prisma.notification.deleteMany({ where: { recipient: { in: emails } } });
@@ -187,5 +188,36 @@ describe('Booking flow', () => {
     const reopened = (await bob.get(query).expect(200)).body.days.flatMap((d: { slots: { startsAt: string }[] }) => d.slots.map((s) => s.startsAt));
     assert.ok(reopened.includes(slot.startsAt), 'a cancelled slot is bookable again');
     assert.ok(await prisma.notification.findFirst({ where: { recipient: aliceEmail, template: 'appointment.cancelled_by_patient', channel: 'EMAIL' } }));
+  });
+
+  it('shares the record with the practice only when the patient ticks the box, and never a relative’s', async () => {
+    const profile = (await request(app.getHttpServer()).get('/v1/practitioners/amina-said').expect(200)).body;
+    const motive = profile.agenda.motives[0];
+    const from = addDaysToDateKey(toDateKey(new Date()), 10);
+    const avail = (await request(app.getHttpServer()).get(`/v1/practitioners/amina-said/availabilities?motiveId=${motive.id}&from=${from}&to=${addDaysToDateKey(from, 13)}`).expect(200)).body;
+    const slots = avail.days.flatMap((d: { slots: { startsAt: string }[] }) => d.slots);
+    assert.ok(slots.length >= 2, 'demo agenda should have slots');
+
+    const patient = request.agent(app.getHttpServer());
+    const address = email();
+    emails.push(address);
+    await signUp(patient, address, 'Salma');
+    const book = async (startsAt: string, extra: object) => {
+      const body = { agendaId: avail.agendaId, motiveId: motive.id, startsAt };
+      await patient.post('/v1/booking/locks').send(body).expect(201);
+      return (await patient.post('/v1/booking/appointments').send({ ...body, instructionsAccepted: true, ...extra }).expect(201)).body;
+    };
+    const shared = () => patient.get('/v1/me/record/consents').expect(200).then((r) => r.body.find((c: { organizationSlug: string }) => c.organizationSlug === 'clinique-demo-al-kamar'));
+
+    // For a relative, the box has no effect on the account holder's record.
+    await book(slots[0].startsAt, { shareRecord: true, newRelative: { firstName: 'Ilyas', lastName: 'Patient', birthDate: '2020-01-01', relationship: 'ENFANT' } });
+    assert.equal(await shared(), undefined, 'no file of her own in this practice yet');
+
+    await book(slots[1].startsAt, { shareRecord: true });
+    const consent = await shared();
+    assert.equal(consent.shared, true);
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: address }, include: { patientProfile: true } });
+    const record = await prisma.medicalRecord.findUniqueOrThrow({ where: { patientProfileId: user.patientProfile!.id }, include: { consents: true } });
+    assert.deepEqual(record.consents.map((c) => c.grantedVia), ['booking']);
   });
 });

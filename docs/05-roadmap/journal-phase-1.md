@@ -234,10 +234,10 @@ Question du porteur du projet : « les cabinets et les médecins ont-ils accès 
 ## Ce qui fonctionne
 - **Page « Partage de mon dossier »** (`/mon-compte/dossier`, liens depuis « Mes rendez-vous » et « Mes ordonnances ») : une explication courte, la liste des cabinets où le patient a une fiche avec « Autoriser l’accès » ou « Retirer l’accès », et la liste « Qui a consulté mon dossier » (établissement, partie consultée, date et heure). Confirmation lue par les lecteurs d’écran (`aria-live`).
 - **API** : un cabinet n’apparaît plus qu’une fois même si le patient y a plusieurs fiches.
+- **Case à la réservation** (étape « Vérifiez et confirmez ») : « Autoriser [cabinet] à voir mon dossier médical complet (facultatif) », décochée par défaut, avec un lien vers « Partage de mon dossier ». Elle n’apparaît que pour un rendez-vous pris pour soi-même, et pas si le dossier est déjà partagé avec ce cabinet. Côté API, champ `shareRecord` de `POST /v1/booking/appointments` ; l’accord est enregistré avec l’origine `booking` (1 test d’intégration : sans effet pour un proche, accord créé pour soi). La liste des accords renvoie aussi l’adresse (`organizationSlug`) du cabinet.
 
 Vérifié dans le navigateur avec un compte patient fictif créé pour l’occasion, rattaché à deux cabinets : page à 1280 px et 375 px, accès autorisé à la clinique, puis côté médecin le dossier passe à « partagé » (`shared: true`) ; la lecture du dossier par le Dr Amina Saïd apparaît dans le journal du patient. Lint, typecheck, build et tests passent.
 
 ## Écarts et limites
 - Le dossier des proches (enfants, parents) ne se partage pas encore depuis cette page.
-- Le partage n’est pas proposé pendant la réservation : le patient doit venir sur cette page.
 - Les textes de la page sont écrits dans le composant, comme sur les autres pages « Mon compte », et pas encore dans `packages/i18n`.

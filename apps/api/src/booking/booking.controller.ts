@@ -28,6 +28,8 @@ const BookSchema = SlotSchema.extend({
   answers: z.record(z.string(), z.string().max(200)).optional(),
   instructionsAccepted: z.literal(true),
   patientMessage: z.string().trim().max(200).optional(),
+  /** The patient lets this practice see their whole medical record (SPEC-13 §Carnet). Never for a relative. */
+  shareRecord: z.boolean().default(false),
 }).refine((v) => !(v.relativeId && v.newRelative), 'Choose an existing relative or a new one, not both');
 
 @ApiTags('booking')

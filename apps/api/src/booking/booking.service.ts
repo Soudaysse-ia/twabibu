@@ -17,6 +17,7 @@ export interface BookingInput {
   answers?: Record<string, string>;
   instructionsAccepted: true;
   patientMessage?: string;
+  shareRecord?: boolean;
 }
 
 /** Online booking (SPEC-03): lock the slot, then create the appointment once the patient is signed in. */
@@ -138,6 +139,15 @@ export class BookingService {
       throw error;
     }
     await this.locks.release(input.agendaId, input.startsAt, bookingSessionId);
+
+    // Sharing asked at booking: the account holder's own record only (a relative's record is not shared from here).
+    if (input.shareRecord && !person.relativeId) {
+      const medical =
+        (await this.prisma.medicalRecord.findUnique({ where: { patientProfileId: profileId } })) ??
+        (await this.prisma.medicalRecord.create({ data: { patientProfileId: profileId } }));
+      const existing = await this.prisma.recordConsent.findFirst({ where: { recordId: medical.id, organizationId, revokedAt: null } });
+      if (!existing) await this.prisma.recordConsent.create({ data: { recordId: medical.id, organizationId, grantedVia: 'booking' } });
+    }
 
     await this.messages.send(appointmentId, status === 'CONFIRMED' ? 'booked' : 'pending');
     const appointment = await this.prisma.appointment.findUniqueOrThrow({ where: { id: appointmentId }, include: appointmentInclude });

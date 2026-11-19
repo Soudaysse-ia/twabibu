@@ -21,12 +21,13 @@ export class ConsentsService {
     const [consents, practices] = await Promise.all([
       this.prisma.recordConsent.findMany({ where: { recordId: record.id, revokedAt: null } }),
       // Practices where the patient has a file: the ones they can share with.
-      this.prisma.patientRecord.findMany({ where: { patientProfileId: user.patientProfileId!, relativeId: null, deletedAt: null }, include: { organization: { select: { id: true, name: true } } } }),
+      this.prisma.patientRecord.findMany({ where: { patientProfileId: user.patientProfileId!, relativeId: null, deletedAt: null }, include: { organization: { select: { id: true, name: true, slug: true } } } }),
     ]);
     const unique = [...new Map(practices.map((p) => [p.organization.id, p])).values()];
     return unique.map((p) => ({
       organizationId: p.organization.id,
       organizationName: p.organization.name,
+      organizationSlug: p.organization.slug,
       shared: consents.some((c) => c.organizationId === p.organization.id),
     }));
   }
