@@ -16,17 +16,7 @@ export default async function MyOrdersPage() {
   const orders = res.ok ? res.data : [];
   return (
     <Container className="flex flex-col gap-5 py-8">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <h1 className="text-2xl font-bold">{t.orders}</h1>
-        <div className="flex gap-4 text-sm font-medium">
-          <Link href="/mon-compte/rendez-vous" className="text-primary hover:underline">
-            Mes rendez-vous
-          </Link>
-          <Link href="/mon-compte/ordonnances" className="text-primary hover:underline">
-            Mes ordonnances
-          </Link>
-        </div>
-      </div>
+      <h1 className="text-2xl font-bold">{t.orders}</h1>
       {orders.length === 0 ? (
         <Card className="flex flex-col gap-2 text-text">
           <p>{t.ordersEmpty}</p>

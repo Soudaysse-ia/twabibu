@@ -283,4 +283,89 @@ describe('Booking flow', () => {
     await signUp(stranger, strangerEmail, 'Autre');
     await stranger.post(`/v1/booking/appointments/${moved.id}/reschedule`).send({ startsAt: slots[0].startsAt }).expect(404);
   });
+  it('lets the patient edit and remove a relative, never one of another account, and not while an appointment is coming', async () => {
+    const profile = (await request(app.getHttpServer()).get('/v1/practitioners/amina-said').expect(200)).body;
+    const motive = profile.agenda.motives[0];
+    const from = addDaysToDateKey(toDateKey(new Date()), 30);
+    const avail = (await request(app.getHttpServer()).get(`/v1/practitioners/amina-said/availabilities?motiveId=${motive.id}&from=${from}&to=${addDaysToDateKey(from, 13)}`).expect(200)).body;
+    const slot = avail.days.flatMap((d: { slots: { startsAt: string }[] }) => d.slots)[0];
+    assert.ok(slot, 'demo agenda should have slots');
+
+    const patient = request.agent(app.getHttpServer());
+    const address = email();
+    emails.push(address);
+    await signUp(patient, address, 'Hadidja');
+    const child = (await patient.post('/v1/me/relatives').send({ firstName: 'Nassim', lastName: 'Patient', birthDate: '2019-02-03', relationship: 'ENFANT' }).expect(201)).body;
+    const parent = (await patient.post('/v1/me/relatives').send({ firstName: 'Zaïnaba', lastName: 'Patient', birthDate: '1950-07-01', relationship: 'PARENT', phone: '321 45 67' }).expect(201)).body;
+    assert.equal(parent.phone, '+2693214567');
+    const badPhone = await patient.post('/v1/me/relatives').send({ firstName: 'X', lastName: 'Y', birthDate: '2000-01-01', relationship: 'AUTRE', phone: '12' }).expect(400);
+    assert.equal(badPhone.body.code, 'VALIDATION_FAILED');
+
+    const edited = await patient.patch(`/v1/me/relatives/${child.id}`).send({ firstName: 'Nassim', lastName: 'Patient', birthDate: '2019-02-04', relationship: 'ENFANT' }).expect(200);
+    assert.equal(edited.body.birthDate, '2019-02-04');
+
+    // Another account sees a 404 for both editing and removing (IDOR).
+    const stranger = request.agent(app.getHttpServer());
+    const strangerEmail = email();
+    emails.push(strangerEmail);
+    await signUp(stranger, strangerEmail, 'Intrus');
+    await stranger.patch(`/v1/me/relatives/${child.id}`).send({ firstName: 'Pirate', lastName: 'Patient', birthDate: '2019-02-04', relationship: 'ENFANT' }).expect(404);
+    await stranger.delete(`/v1/me/relatives/${child.id}`).expect(404);
+
+    // An upcoming appointment for the child blocks the removal; cancelling it unblocks it.
+    const body = { agendaId: avail.agendaId, motiveId: motive.id, startsAt: slot.startsAt };
+    await patient.post('/v1/booking/locks').send(body).expect(201);
+    const booked = (await patient.post('/v1/booking/appointments').send({ ...body, instructionsAccepted: true, relativeId: child.id }).expect(201)).body;
+    const blocked = await patient.delete(`/v1/me/relatives/${child.id}`).expect(409);
+    assert.equal(blocked.body.details.upcoming, 1);
+    await patient.post(`/v1/me/appointments/${booked.id}/cancel`).expect(200);
+    await patient.delete(`/v1/me/relatives/${child.id}`).expect(204);
+    await patient.delete(`/v1/me/relatives/${parent.id}`).expect(204);
+    assert.deepEqual((await patient.get('/v1/me').expect(200)).body.relatives, []);
+    // The past appointment still shows who it was for.
+    const past = (await patient.get('/v1/me/appointments?scope=past').expect(200)).body;
+    assert.equal(past[0].forName, 'Nassim Patient');
+  });
+
+  it('updates the profile, logs a name change, and lists and signs out the other devices', async () => {
+    const address = email();
+    emails.push(address);
+    const laptop = request.agent(app.getHttpServer());
+    await signUp(laptop, address, 'Faïza');
+    const phone = request.agent(app.getHttpServer());
+    await phone.post('/v1/auth/otp/request').send({ email: address }).set('User-Agent', 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36').expect(200);
+    await phone.post('/v1/auth/otp/verify').send({ email: address, code: '000000' }).set('User-Agent', 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36').expect(200);
+
+    const locality = await prisma.locality.findFirstOrThrow({ where: { isActive: true } });
+    const initial = (await laptop.get('/v1/me/profile').expect(200)).body;
+    assert.equal(initial.email, address);
+    const update = { civility: 'MME', firstName: 'Faïza', lastName: 'Ahmed', birthDate: '1990-05-14', addressLine: 'Rue de la Corniche', localityId: locality.id, insurance: 'CNSS' };
+    const saved = (await laptop.put('/v1/me/profile').send(update).expect(200)).body;
+    assert.equal(saved.lastName, 'Ahmed');
+    assert.equal(saved.locality.id, locality.id);
+    await laptop.put('/v1/me/profile').send({ ...update, localityId: '00000000-0000-7000-8000-000000000000' }).expect(400);
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: address }, include: { patientProfile: true } });
+    const logs = await prisma.auditLog.findMany({ where: { entityId: user.patientProfile!.id, action: 'patient.identity.update' } });
+    assert.equal(logs.length, 1, 'only the name change is logged');
+    assert.equal((logs[0]!.changes as { after: { lastName: string } }).after.lastName, 'Ahmed');
+    // Saving again without a name change adds no log line.
+    await laptop.put('/v1/me/profile').send({ ...update, insurance: null }).expect(200);
+    assert.equal(await prisma.auditLog.count({ where: { entityId: user.patientProfile!.id, action: 'patient.identity.update' } }), 1);
+
+    const sessions = (await laptop.get('/v1/me/sessions').expect(200)).body as { id: string; device: string; current: boolean }[];
+    assert.equal(sessions.length, 2);
+    assert.equal(sessions.filter((s) => s.current).length, 1);
+    const other = sessions.find((s) => !s.current)!;
+    assert.equal(other.device, 'Chrome sur Android');
+    // Nobody else can sign this device out.
+    const stranger = request.agent(app.getHttpServer());
+    const strangerEmail = email();
+    emails.push(strangerEmail);
+    await signUp(stranger, strangerEmail, 'Intrus');
+    await stranger.delete(`/v1/me/sessions/${other.id}`).expect(404);
+    await phone.get('/v1/me').expect(200);
+    await laptop.delete(`/v1/me/sessions/${other.id}`).expect(204);
+    await phone.get('/v1/me').expect(401);
+    await laptop.get('/v1/me').expect(200);
+  });
 });

@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Card, Container } from '@twabibu/ui';
 import { formatDateLong, formatTime } from '@twabibu/utils';
@@ -29,17 +28,7 @@ export default async function RecordSharingPage() {
   const rows = log.ok ? log.data : [];
   return (
     <Container className="flex max-w-3xl flex-col gap-6 py-8">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <h1 className="text-2xl font-bold">Partage de mon dossier</h1>
-        <div className="flex flex-wrap gap-4 text-sm font-medium">
-          <Link href="/mon-compte/rendez-vous" className="text-primary hover:underline">
-            Mes rendez-vous
-          </Link>
-          <Link href="/mon-compte/ordonnances" className="text-primary hover:underline">
-            Mes ordonnances
-          </Link>
-        </div>
-      </div>
+      <h1 className="text-2xl font-bold">Partage de mon dossier</h1>
 
       <Card className="flex flex-col gap-2 text-sm text-text">
         <p>

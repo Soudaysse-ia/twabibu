@@ -93,7 +93,7 @@ export interface Me {
   phone: string | null;
   email: string | null;
   profile: { civility: string | null; firstName: string; lastName: string; birthDate: string } | null;
-  relatives: { id: string; firstName: string; lastName: string; birthDate: string; relationship: string }[];
+  relatives: { id: string; firstName: string; lastName: string; birthDate: string; relationship: string; phone: string | null }[];
 }
 
 export interface PatientAppointment {

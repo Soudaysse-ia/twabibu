@@ -4,8 +4,6 @@ import { redirect } from 'next/navigation';
 import { CalendarPlus } from 'lucide-react';
 import { buttonClasses, Card, Container } from '@twabibu/ui';
 import { AppointmentCard } from '@/components/AppointmentCard';
-import { LogoutButton } from '@/components/LogoutButton';
-import { ReminderPreference } from '@/components/ReminderPreference';
 import { apiGet } from '@/lib/api-server';
 import type { Me, PatientAppointment } from '@/lib/types';
 
@@ -30,21 +28,6 @@ export default async function MyAppointmentsPage() {
             {me.data.email ? ` · ${me.data.email}` : ''}
             {me.data.relatives.length ? ` · ${me.data.relatives.length} proche${me.data.relatives.length > 1 ? 's' : ''}` : ''}
           </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Link href="/mon-compte/ordonnances" className="text-sm font-medium text-primary hover:underline">
-            Mes ordonnances
-          </Link>
-          <Link href="/mon-compte/commandes" className="text-sm font-medium text-primary hover:underline">
-            Mes commandes
-          </Link>
-          <Link href="/mon-compte/soignants" className="text-sm font-medium text-primary hover:underline">
-            Mes soignants
-          </Link>
-          <Link href="/mon-compte/dossier" className="text-sm font-medium text-primary hover:underline">
-            Partage de mon dossier
-          </Link>
-          <LogoutButton />
         </div>
       </div>
 
@@ -86,7 +69,6 @@ export default async function MyAppointmentsPage() {
         </section>
       ) : null}
 
-      {me.data.profile ? <ReminderPreference /> : null}
     </Container>
   );
 }
