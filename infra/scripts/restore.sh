@@ -13,7 +13,7 @@ psql() { docker compose exec -T postgres psql -U twabibu -v ON_ERROR_STOP=1 "$@"
 if [ "$MODE" = test ]; then
   psql -d postgres -c 'DROP DATABASE IF EXISTS twabibu_restore_test' -c 'CREATE DATABASE twabibu_restore_test'
   docker compose exec -T postgres pg_restore -U twabibu -d twabibu_restore_test --no-owner < "$FILE"
-  psql -d twabibu_restore_test -At -c 'SELECT count(*) || '' users, '' || (SELECT count(*) FROM "Appointment") || '' appointments, '' || (SELECT count(*) FROM "_prisma_migrations") || '' migrations'' FROM "User"'
+  psql -d twabibu_restore_test -At -c "SELECT (SELECT count(*) FROM \"User\") || ' comptes, ' || (SELECT count(*) FROM \"Appointment\") || ' rendez-vous, ' || (SELECT count(*) FROM _prisma_migrations) || ' migrations'"
   psql -d postgres -c 'DROP DATABASE twabibu_restore_test'
   date -u +%Y-%m-%dT%H:%M:%SZ > backups/.last-restore-test
   echo "Restore test OK: ${FILE}"

@@ -6,7 +6,7 @@
 1. **Pré-production** : fusionner sur `main`. Le workflow *Deploy* construit les trois images (`api`, `web` en mode démo, `admin`), les publie avec le tag `sha-<commit>` et les déploie.
 2. Vérifier la pré-production (parcours patient, Pro, Pharma, back-office).
 3. **Production** : `git tag v0.2.0 && git push origin v0.2.0`. Le workflow construit les images sans le mode démo, puis attend la validation d’un relecteur (environnement GitHub `production`).
-4. Sur le serveur, `scripts/deploy.sh` fait dans l’ordre : téléchargement des images, **sauvegarde** (production), migrations Prisma, données de démo (pré-production seulement), redémarrage, attente des contrôles de santé. Il s’arrête à la première erreur.
+4. Sur le serveur, `scripts/deploy.sh` fait dans l’ordre : téléchargement des images, **sauvegarde** (production), migrations Prisma, données de démo (pré-production seulement), redémarrage, attente des contrôles de santé. Il s’arrête à la première erreur. **Si la nouvelle version échoue à ses contrôles de santé, il relance aussitôt la précédente**, garde les journaux dans `deploy-failure-<date>.log` et le note dans `deployments.log` ; le workflow GitHub apparaît alors en échec.
 5. Le workflow vérifie enfin `https://<domaine>/api/ready`.
 
 L’historique est dans `/srv/twabibu/deployments.log`.

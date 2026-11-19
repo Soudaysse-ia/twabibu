@@ -2,7 +2,8 @@
 # Deploys one image tag on this server (runbook: docs/03-architecture/runbooks/deploiement.md).
 #   ./scripts/deploy.sh v0.2.0      production
 #   ./scripts/deploy.sh sha-1a2b3c4 staging
-# Order: pull, backup (production), migrations, restart, wait for health checks. Stops at the first error.
+# Order: pull, backup (production), migrations, restart, wait for health checks. Stops at the first error;
+# if the new release fails its health checks, the previous one is started again.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 NEW_TAG="${1:?usage: deploy.sh <image-tag>}"
@@ -33,7 +34,16 @@ fi
 
 log "restart"
 if ! docker compose up -d --wait --remove-orphans; then
-  log "health checks failed: see « docker compose logs api web admin ». Roll back with ./scripts/rollback.sh"
+  docker compose logs --tail 50 api web admin > "deploy-failure-$(date -u +%Y%m%dT%H%M%SZ).log" 2>&1 || true
+  if [ -n "$OLD_TAG" ] && [ "$OLD_TAG" != "$NEW_TAG" ]; then
+    # Migrations are backward compatible (runbooks/deploiement.md): the previous release runs on the new schema.
+    log "health checks failed: going back to ${OLD_TAG} (logs saved in deploy-failure-*.log)"
+    set_tag "$OLD_TAG"
+    docker compose up -d --wait --remove-orphans || log "the previous release does not start either: see the logs"
+    echo "$NEW_TAG $(date -u +%Y-%m-%dT%H:%M:%SZ) failed, back on ${OLD_TAG}" >> deployments.log
+  else
+    log "health checks failed (logs saved in deploy-failure-*.log)"
+  fi
   exit 1
 fi
 [ -n "$OLD_TAG" ] && [ "$OLD_TAG" != "$NEW_TAG" ] && echo "$OLD_TAG" > .previous-tag

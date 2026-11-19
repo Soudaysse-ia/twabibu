@@ -2,6 +2,8 @@
 # Daily database backup (cron 02:30 UTC, see server-setup.sh). Keeps 14 days on the server and, when configured,
 # sends an encrypted copy off the server (age + rclone): a backup on the same disk is not a backup.
 set -euo pipefail
+# Dumps hold health data: readable by the deploy user only.
+umask 077
 cd "$(dirname "$0")/.."
 get() { grep -E "^$1=" .env | cut -d= -f2- || true; }
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
