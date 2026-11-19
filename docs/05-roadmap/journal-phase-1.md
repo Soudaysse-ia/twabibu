@@ -241,3 +241,22 @@ Vérifié dans le navigateur avec un compte patient fictif créé pour l’occas
 ## Écarts et limites
 - Le dossier des proches (enfants, parents) ne se partage pas encore depuis cette page.
 - Les textes de la page sont écrits dans le composant, comme sur les autres pages « Mon compte », et pas encore dans `packages/i18n`.
+
+# Onzième lot : l’essentiel côté patient et la vitrine de la démo (19 novembre 2026)
+
+Demande du porteur du projet : construire tout ce qui est essentiel à la démo, avec les fonctions principales d’un service de prise de rendez-vous, et les mettre en avant.
+
+## Ce qui fonctionne
+- **Déplacer un rendez-vous** (BOOK-08) : bouton « Déplacer le rendez-vous » dans « Mes rendez-vous », page `/mon-compte/rendez-vous/[id]/deplacer` avec les créneaux libres du même soignant et du même motif (par 2 semaines). Le créneau choisi est tenu 10 minutes, puis `POST /v1/booking/appointments/:id/reschedule` annule l’ancien (`CANCELLED_BY_PATIENT`), crée le nouveau relié par `rescheduledFromId` et envoie un seul message « déplacé ». Même délai que l’annulation en ligne. L’ancien n’est annulé qu’à la confirmation.
+- **Mes soignants** (ACCOUNT-04) : `/mon-compte/soignants`, un bloc par soignant consulté ou réservé (prochain rendez-vous, dernière consultation, pour qui), avec « Prendre rendez-vous » et « Voir le profil ».
+- **Vitrine de la démo** : page `/demo` (les trois espaces avec leurs comptes et un lien vers chaque fonction, trois parcours guidés, les règles de confidentialité déjà tenues) et bandeau « Version de démonstration » en haut du site. Les comptes de démo s’affichent aussi sur les pages de connexion. Tout cela n’apparaît qu’en développement ou avec `NEXT_PUBLIC_DEMO_MODE=true` au build ; sinon `/demo` répond 404.
+
+Tests automatisés : 1 test d’intégration de déplacement (créneau tenu obligatoire, ancien annulé et relié, un seul message, créneau libéré, rendez-vous d’un autre introuvable). Vérifié dans le navigateur à 1280 px et 375 px : déplacement complet, « Mes soignants », page `/demo`, bandeau sur l’accueil.
+
+## Défauts trouvés et corrigés pendant la réalisation
+- Le rendez-vous d’un autre patient répondait « créneau expiré » au lieu de « introuvable » quand la session n’avait pas de créneau tenu : la propriété est maintenant vérifiée en premier.
+- La carte « Mes rendez-vous » annonçait un délai de 24 h en dur, faux pour les motifs qui ont un autre délai.
+
+## Écarts et limites
+- On ne peut pas déplacer vers un créneau qui chevauche le rendez-vous actuel.
+- Le back-office (`apps/admin`, port 3200) n’est pas relié depuis `/demo`.

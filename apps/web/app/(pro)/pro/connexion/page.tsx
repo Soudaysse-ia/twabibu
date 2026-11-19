@@ -5,6 +5,7 @@ import { Card, Logo } from '@twabibu/ui';
 import { ProSignIn } from '@/components/pro/ProSignIn';
 import { apiGet } from '@/lib/api-server';
 import type { ProMe } from '@/lib/pro-types';
+import { isDemo } from '@/lib/demo';
 
 export const metadata: Metadata = { title: 'Connexion Twabibu Pro', robots: { index: false } };
 
@@ -30,7 +31,7 @@ export default async function ProSignInPage({ searchParams }: { searchParams: Pr
             </p>
           ) : null}
           <ProSignIn />
-          {process.env.NODE_ENV !== 'production' ? (
+          {isDemo() ? (
             <p className="text-xs text-text-muted">
               Comptes de démonstration (code 000000) : amina.said@demo.twabibu.km (praticienne), secretariat@demo.twabibu.km, direction@demo.twabibu.km.
             </p>
