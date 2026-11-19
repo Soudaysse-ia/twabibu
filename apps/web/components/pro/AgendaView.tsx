@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Globe, Phone, Plus, Store } from 'lucide-rea
 import { Button, cn } from '@twabibu/ui';
 import {
   addDaysToDateKey,
+  formatDateLong,
   formatDayHeader,
   formatTime,
   toDateKey,
@@ -12,12 +13,14 @@ import {
   weekdayOf,
   zonedToUtc,
 } from '@twabibu/utils';
-import { api, errorMessage } from '@/lib/api-client';
+import { api, ApiError, errorMessage } from '@/lib/api-client';
+import { DRAGGABLE, dropTarget } from '@/lib/agenda-drag';
 import { layoutLanes } from '@/lib/agenda-layout';
 import { monthGrid, monthRange, shiftMonth } from '@/lib/agenda-month';
 import { AGENDA_COLORS, type AgendaEvents, type ProAgenda, type ProAppointment } from '@/lib/pro-types';
 import { AppointmentDrawer } from './AppointmentDrawer';
 import { NewAppointmentDrawer, type NewAppointmentDraft } from './NewAppointmentDrawer';
+import { Drawer } from './Drawer';
 import { useMembership } from './ProContext';
 
 const START = 7 * 60;
@@ -70,6 +73,18 @@ export function AgendaView() {
   const [draft, setDraft] = useState<NewAppointmentDraft | null>(null);
   const [opened, setOpened] = useState<ProAppointment | null>(null);
   const [now, setNow] = useState(() => new Date());
+  // Drag and drop (mouse or pen): pointer offsets while dragging, then the move to confirm.
+  const [drag, setDrag] = useState<{
+    id: string;
+    x: number;
+    y: number;
+    dx: number;
+    dy: number;
+    colWidth: number;
+    moved: boolean;
+  } | null>(null);
+  const [move, setMove] = useState<{ appointment: ProAppointment; startsAt: Date } | null>(null);
+  const dragged = useRef(false);
   const scroller = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -354,7 +369,7 @@ export function AgendaView() {
                 </span>
               ))}
             </div>
-            {columns.map((col) => {
+            {columns.map((col, colIndex) => {
               const windows = events ? inColumn(events.windows, col, (w) => w.date) : [];
               const absences = events
                 ? inColumn(events.absences, col, (a) => toDateKey(new Date(a.startsAt)))
@@ -431,19 +446,83 @@ export function AgendaView() {
                     const top = (Math.max(s, START) - START) * PX_PER_MIN;
                     const height = Math.max(18, (Math.min(e, END) - Math.max(s, START)) * PX_PER_MIN - 2);
                     const SourceIcon = a.source === 'ONLINE' ? Globe : a.source === 'WALK_IN' ? Store : Phone;
+                    const draggable =
+                      (DRAGGABLE as readonly string[]).includes(a.status) && new Date(a.startsAt) > now;
+                    const dragging = drag?.id === a.id && drag.moved ? drag : null;
+                    const dayOffset =
+                      dragging && mode === 'week'
+                        ? Math.max(
+                            -colIndex,
+                            Math.min(
+                              columns.length - 1 - colIndex,
+                              Math.round(dragging.dx / dragging.colWidth),
+                            ),
+                          )
+                        : 0;
+                    const target = dragging
+                      ? (dropTarget(
+                          a.startsAt,
+                          a.endsAt,
+                          { deltaMinutes: dragging.dy / PX_PER_MIN, dayOffset },
+                          { dayStart: START, dayEnd: END, step: 5 },
+                        ) ?? new Date(a.startsAt))
+                      : null;
                     return (
                       <button
                         key={a.id}
                         type="button"
-                        onClick={() => setOpened(a)}
+                        onClick={() => {
+                          // The click that ends a drag must not also open the appointment.
+                          if (dragged.current) {
+                            dragged.current = false;
+                            return;
+                          }
+                          setOpened(a);
+                        }}
+                        onPointerDown={(e) => {
+                          if (!draggable || e.pointerType === 'touch' || e.button !== 0) return;
+                          e.currentTarget.setPointerCapture(e.pointerId);
+                          setDrag({
+                            id: a.id,
+                            x: e.clientX,
+                            y: e.clientY,
+                            dx: 0,
+                            dy: 0,
+                            colWidth: e.currentTarget.parentElement!.getBoundingClientRect().width,
+                            moved: false,
+                          });
+                        }}
+                        onPointerMove={(e) => {
+                          if (drag?.id !== a.id) return;
+                          const dx = e.clientX - drag.x;
+                          const dy = e.clientY - drag.y;
+                          setDrag({ ...drag, dx, dy, moved: drag.moved || Math.abs(dx) + Math.abs(dy) > 6 });
+                        }}
+                        onPointerUp={() => {
+                          if (drag?.id !== a.id) return;
+                          setDrag(null);
+                          if (!drag.moved) return;
+                          dragged.current = true;
+                          // Reset after the click that follows this pointerup (if the browser sends one).
+                          setTimeout(() => (dragged.current = false), 0);
+                          if (target && target.getTime() !== new Date(a.startsAt).getTime())
+                            setMove({ appointment: a, startsAt: target });
+                        }}
+                        onPointerCancel={() => setDrag(null)}
                         className={cn(
                           'absolute z-[2] overflow-hidden rounded-md border border-ink/10 px-1.5 py-0.5 text-left text-[11px] leading-tight text-ink shadow-card hover:z-10 hover:shadow-float focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-primary',
                           COLOR_CLASS[colorOf(a.agendaId)],
                           STATUS_STYLE[a.status],
+                          draggable && 'cursor-grab',
+                          dragging && 'z-30 cursor-grabbing opacity-90 shadow-float',
                         )}
                         style={{
                           top,
                           height,
+                          transform:
+                            dragging && target
+                              ? `translate(${dayOffset * dragging.colWidth}px, ${(toMinutesOfDay(target) - s) * PX_PER_MIN}px)`
+                              : undefined,
                           left: `calc(${(lane / lanes) * 100}% + 2px)`,
                           width: `calc(${100 / lanes}% - 4px)`,
                         }}
@@ -451,7 +530,7 @@ export function AgendaView() {
                       >
                         <span className="flex items-center gap-1 font-medium tabular-nums">
                           <SourceIcon aria-hidden="true" size={10} className="shrink-0" />
-                          {formatTime(new Date(a.startsAt))}
+                          {formatTime(target ?? new Date(a.startsAt))}
                           <span className="truncate font-bold">
                             {a.patient.firstName} {a.patient.lastName}
                           </span>
@@ -492,7 +571,11 @@ export function AgendaView() {
         <span className="flex items-center gap-1.5">
           <Store aria-hidden="true" size={12} /> Sur place
         </span>
-        <span>{mode === 'month' ? 'Cliquez sur un jour pour l’ouvrir. La barre montre le remplissage des plages en ligne.' : 'Cliquez sur un horaire libre pour ajouter un rendez-vous.'}</span>
+        <span>
+          {mode === 'month'
+            ? 'Cliquez sur un jour pour l’ouvrir. La barre montre le remplissage des plages en ligne.'
+            : 'Cliquez sur un horaire libre pour ajouter un rendez-vous, glissez un rendez-vous pour le déplacer.'}
+        </span>
       </div>
 
       {draft ? (
@@ -506,6 +589,17 @@ export function AgendaView() {
           onClose={() => setDraft(null)}
           onCreated={() => {
             setDraft(null);
+            void load();
+          }}
+        />
+      ) : null}
+      {move ? (
+        <MoveDrawer
+          key={move.appointment.id + move.startsAt.toISOString()}
+          move={move}
+          onClose={() => setMove(null)}
+          onMoved={() => {
+            setMove(null);
             void load();
           }}
         />
@@ -607,5 +701,95 @@ function MonthView({
         )}
       </div>
     </div>
+  );
+}
+
+/** Confirms a drag and drop (SPEC-05): shows old and new time, tells the patient by default. */
+function MoveDrawer({
+  move,
+  onClose,
+  onMoved,
+}: {
+  move: { appointment: ProAppointment; startsAt: Date };
+  onClose: () => void;
+  onMoved: () => void;
+}) {
+  const membership = useMembership();
+  const [notify, setNotify] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const a = move.appointment;
+  const from = new Date(a.startsAt);
+  const past = move.startsAt.getTime() < Date.now();
+  const when = (d: Date) => `${formatDateLong(d)} à ${formatTime(d)}`;
+
+  async function confirm() {
+    setBusy(true);
+    setError(null);
+    try {
+      await api(`/v1/pro/orgs/${membership.organizationId}/appointments/${a.id}`, {
+        method: 'PATCH',
+        body: { startsAt: move.startsAt.toISOString(), notifyPatient: notify },
+      });
+      onMoved();
+    } catch (err) {
+      setError(
+        err instanceof ApiError && err.code === 'SLOT_UNAVAILABLE'
+          ? 'Ce créneau est déjà occupé.'
+          : err instanceof ApiError && err.code === 'CONFLICT'
+            ? 'Le praticien est absent à cet horaire.'
+            : errorMessage(err),
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Drawer title="Déplacer le rendez-vous" onClose={onClose}>
+      <div className="flex flex-col gap-4 text-sm">
+        <p className="font-medium text-ink">
+          {a.patient.firstName} {a.patient.lastName} · {a.motive.name}
+        </p>
+        <dl className="grid gap-2">
+          <div>
+            <dt className="text-text-muted">Ancien horaire</dt>
+            <dd className="text-text line-through first-letter:uppercase">{when(from)}</dd>
+          </div>
+          <div>
+            <dt className="text-text-muted">Nouvel horaire</dt>
+            <dd className="font-bold text-ink first-letter:uppercase">{when(move.startsAt)}</dd>
+          </div>
+        </dl>
+        {past ? (
+          <p role="alert" className="rounded-md bg-warning-soft px-3 py-2 text-ink">
+            Cet horaire est déjà passé. Choisissez un horaire à venir.
+          </p>
+        ) : (
+          <label className="flex gap-2 text-text">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-4 accent-primary"
+              checked={notify}
+              onChange={(e) => setNotify(e.target.checked)}
+            />
+            Prévenir le patient (e-mail, ou SMS sans e-mail)
+          </label>
+        )}
+        {error ? (
+          <p role="alert" className="rounded-md bg-danger-soft px-3 py-2 text-danger">
+            {error}
+          </p>
+        ) : null}
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" disabled={busy || past} onClick={confirm}>
+            Déplacer
+          </Button>
+          <Button variant="secondary" size="sm" onClick={onClose}>
+            Annuler
+          </Button>
+        </div>
+      </div>
+    </Drawer>
   );
 }
