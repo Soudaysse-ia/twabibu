@@ -334,7 +334,15 @@ describe('Booking flow', () => {
     await signUp(laptop, address, 'Faïza');
     const phone = request.agent(app.getHttpServer());
     await phone.post('/v1/auth/otp/request').send({ email: address }).set('User-Agent', 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36').expect(200);
-    await phone.post('/v1/auth/otp/verify').send({ email: address, code: '000000' }).set('User-Agent', 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36').expect(200);
+    // Through the site's proxy (private network), the visitor's address set by Caddy is kept (ADR-020).
+    await phone
+      .post('/v1/auth/otp/verify')
+      .send({ email: address, code: '000000' })
+      .set('User-Agent', 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36')
+      .set('X-Forwarded-For', '203.0.113.7')
+      .expect(200);
+    const phoneSession = await prisma.session.findFirstOrThrow({ where: { user: { email: address } }, orderBy: { createdAt: 'desc' } });
+    assert.equal(phoneSession.ip, '203.0.113.7');
 
     const locality = await prisma.locality.findFirstOrThrow({ where: { isActive: true } });
     const initial = (await laptop.get('/v1/me/profile').expect(200)).body;
