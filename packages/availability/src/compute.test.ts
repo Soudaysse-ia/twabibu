@@ -208,5 +208,6 @@ describe('computeSlots — properties', () => {
       ),
       { numRuns: 300 },
     );
-  });
+    // 300 random runs take ~5 s on slower machines (cloud, CI): Vitest's 5 s default is too tight.
+  }, 30_000);
 });

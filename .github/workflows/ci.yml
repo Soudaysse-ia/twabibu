@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, types, tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: twabibu
+          POSTGRES_PASSWORD: twabibu
+          POSTGRES_DB: twabibu_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U twabibu -d twabibu_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://twabibu:twabibu@localhost:5432/twabibu_ci
+      REDIS_URL: redis://localhost:6379
+      APP_URL: http://localhost:3100
+      NEXT_TELEMETRY_DISABLED: '1'
+      PRISMA_HIDE_UPDATE_MESSAGE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build packages and apps
+        run: pnpm build
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Database (migrations + seed)
+        run: |
+          pnpm --filter @twabibu/api exec prisma migrate deploy
+          pnpm --filter @twabibu/api exec tsx prisma/seed.ts
+      - name: Tests
+        run: pnpm test
