@@ -56,3 +56,68 @@ jobs:
           pnpm --filter @twabibu/api exec tsx prisma/seed.ts
       - name: Tests
         run: pnpm test
+
+  e2e:
+    # Journeys P1, P2, P3+P6, P7 in a real browser, desktop and phone (QA-01). Seeded demo data, fake e-mail (code 000000).
+    name: Parcours de bout en bout
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: twabibu
+          POSTGRES_PASSWORD: twabibu
+          POSTGRES_DB: twabibu_e2e
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U twabibu -d twabibu_e2e"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://twabibu:twabibu@localhost:5432/twabibu_e2e
+      REDIS_URL: redis://localhost:6379
+      APP_URL: http://localhost:3100
+      NEXT_TELEMETRY_DISABLED: '1'
+      PRISMA_HIDE_UPDATE_MESSAGE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm build
+      - name: Database (migrations + demo seed)
+        run: |
+          pnpm --filter @twabibu/api exec prisma migrate deploy
+          pnpm --filter @twabibu/api exec tsx prisma/seed.ts
+      - name: Start the API, the site and the back-office
+        run: |
+          pnpm --filter @twabibu/api start > api.log 2>&1 &
+          pnpm --filter @twabibu/web start > web.log 2>&1 &
+          pnpm --filter @twabibu/admin start > admin.log 2>&1 &
+          for url in http://localhost:4000/ready http://localhost:3100/ http://localhost:3200/connexion; do
+            timeout 90 bash -c "until curl -fsS -o /dev/null $url; do sleep 1; done" || { echo "Not ready: $url"; cat api.log web.log admin.log; exit 1; }
+          done
+      - name: Browser
+        run: pnpm --filter @twabibu/web exec playwright install --with-deps chromium
+      - name: Journeys
+        run: pnpm --filter @twabibu/web e2e
+      - name: Screenshots and logs of failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-failures
+          path: |
+            apps/web/test-results
+            api.log
+            web.log
+            admin.log
+          retention-days: 7

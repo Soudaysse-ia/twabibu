@@ -23,3 +23,7 @@ next-env.d.ts
 # Generated from docs/02-design/design-tokens.json at build time
 packages/tokens/theme.css
 packages/tokens/src/generated/
+
+# Playwright
+apps/web/test-results/
+apps/web/playwright-report/
