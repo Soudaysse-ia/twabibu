@@ -159,6 +159,18 @@ export const emailTemplates = {
     };
   },
   /** Back-office decision on a practitioner or pharmacy file (SPEC-11 §2). */
+  proWelcome: (d: { name: string; url: string }): RenderedEmail => {
+    const subject = 'Bienvenue sur Twabibu Pro';
+    const lines = [
+      'Votre compte professionnel est créé. Vous pouvez dès maintenant régler votre agenda, vos motifs et vos horaires.',
+      'Votre profil sera visible des patients après la vérification de votre dossier par l’équipe Twabibu (sous 48 h ouvrées). Nous pourrons vous appeler pour confirmer votre identité.',
+    ];
+    return {
+      subject,
+      text: `Bonjour ${d.name},\n\n${lines.join('\n\n')}\n\n${d.url}\n\nTwabibu, à vos côtés dans chaque temps de soin.`,
+      html: layout(subject, [`Bonjour ${esc(d.name)},`, ...lines.map(esc)], { label: 'Ouvrir mon espace', url: d.url }),
+    };
+  },
   verificationDecision: (d: { name: string; decision: 'VERIFIED' | 'CHANGES_REQUESTED' | 'REJECTED' | 'SUSPENDED' | 'REACTIVATED'; message?: string; url: string }): RenderedEmail => {
     const copy = {
       VERIFIED: ['Votre profil est vérifié', 'Bonne nouvelle : votre dossier est validé. Votre profil est maintenant visible des patients sur Twabibu.'],

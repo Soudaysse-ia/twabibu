@@ -8,6 +8,7 @@ export interface ProMembership {
   role: ProRole;
   practitionerId: string | null;
   displayName: string;
+  verificationStatus: 'UNVERIFIED' | 'PENDING' | 'CHANGES_REQUESTED' | 'VERIFIED' | 'REJECTED' | null;
 }
 
 export interface ProMe {

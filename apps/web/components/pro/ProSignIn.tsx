@@ -8,6 +8,7 @@ export function ProSignIn() {
   return (
     <EmailOtpForm
       allowSignup={false}
+      noAccountMessage="Cette adresse n’est associée à aucun compte professionnel. Pour rejoindre Twabibu, inscrivez votre cabinet ci-dessous."
       title="Connexion à Twabibu Pro"
       onDone={() => {
         router.replace('/pro/app');

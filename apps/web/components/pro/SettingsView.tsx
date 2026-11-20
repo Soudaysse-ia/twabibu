@@ -22,9 +22,9 @@ const toMin = (v: string) => {
 type Motive = AgendaSettings['motives'][number];
 type Rule = { weekday: number; start: string; end: string; motiveIds: string[] };
 
-function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+function Section({ id, title, description, children }: { id?: string; title: string; description?: string; children: React.ReactNode }) {
   return (
-    <Card className="flex flex-col gap-4">
+    <Card id={id} className="flex scroll-mt-20 flex-col gap-4">
       <div>
         <h2 className="text-base font-bold">{title}</h2>
         {description ? <p className="text-sm text-text-muted">{description}</p> : null}
@@ -230,7 +230,7 @@ export function SettingsView() {
         </div>
       </Section>
 
-      <Section title="Motifs de consultation" description="Durée, tarif et consignes de chaque type de rendez-vous.">
+      <Section id="motifs" title="Motifs de consultation" description="Durée, tarif et consignes de chaque type de rendez-vous.">
         <ul className="flex flex-col gap-2">
           {s.motives.map((m) =>
             editing === m.id ? (
@@ -286,7 +286,7 @@ export function SettingsView() {
         ) : null}
       </Section>
 
-      <Section title="Plages réservables en ligne" description="Horaires de la semaine pendant lesquels les patients peuvent réserver. En dehors, seul le cabinet ajoute des rendez-vous.">
+      <Section id="plages" title="Plages réservables en ligne" description="Horaires de la semaine pendant lesquels les patients peuvent réserver. En dehors, seul le cabinet ajoute des rendez-vous.">
         <div className="flex flex-col divide-y divide-border">
           {WEEKDAYS.map(([wd, label]) => {
             const dayRules = rules.map((r, i) => ({ r, i })).filter(({ r }) => r.weekday === wd);

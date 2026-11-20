@@ -8,6 +8,7 @@ import { SESSION_COOKIE, clearCookie, writeCookie } from '../common/cookies.js';
 import { ZodValidationPipe } from '../common/zod-validation.pipe.js';
 import { AuthGuard, CurrentUser } from './auth.guard.js';
 import { AuthService, SESSION_TTL_SECONDS } from './auth.service.js';
+import { ProSignupService } from '../pro/pro-signup.service.js';
 import type { AuthedRequest, SessionUser } from './auth.types.js';
 
 /** E-mail addresses are compared in lower case, without surrounding spaces. */
@@ -30,11 +31,27 @@ const SignupSchema = z.object({
   emailReminders: z.boolean().default(true),
 });
 
+const ProSignupSchema = z.object({
+  signupToken: z.string().min(20),
+  kind: z.enum(['INDEPENDENT', 'FACILITY']),
+  specialityId: z.string().uuid(),
+  title: z.enum(['DR', 'NONE']),
+  firstName: z.string().trim().min(1).max(60),
+  lastName: z.string().trim().min(1).max(60),
+  licenseNumber: z.string().trim().min(3).max(40),
+  phone: z.string().trim().min(5).max(30),
+  organizationName: z.string().trim().min(2).max(120),
+  addressLine: z.string().trim().min(3).max(200),
+  localityId: z.string().uuid(),
+  acceptTerms: z.literal(true),
+});
+
 @ApiTags('auth')
 @Controller('v1/auth')
 export class AuthController {
   constructor(
     private readonly auth: AuthService,
+    private readonly proSignup: ProSignupService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
@@ -81,6 +98,19 @@ export class AuthController {
     const token = await this.auth.signupPatient(body, this.meta(req));
     this.setSession(res, token);
     return { status: 'LOGGED_IN' };
+  }
+
+  @Post('signup/practitioner')
+  @HttpCode(201)
+  @ApiOperation({ summary: 'Crée le compte soignant, son cabinet, son agenda et ses motifs ; le profil attend la vérification.' })
+  async signupPractitioner(
+    @Body(new ZodValidationPipe(ProSignupSchema)) body: z.infer<typeof ProSignupSchema>,
+    @Req() req: AuthedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { sessionToken, organizationId } = await this.proSignup.signup(body, this.meta(req));
+    this.setSession(res, sessionToken);
+    return { status: 'LOGGED_IN', organizationId };
   }
 
   @Post('logout')

@@ -69,7 +69,7 @@ export class ProService {
   async me(user: SessionUser) {
     const memberships = await this.prisma.membership.findMany({
       where: { userId: user.id, role: { in: ['OWNER', 'ADMIN', 'PRACTITIONER', 'SECRETARY'] }, organization: { status: { not: 'SUSPENDED' }, type: { not: 'PHARMACY' } } },
-      include: { organization: { select: { id: true, name: true, type: true } }, practitioner: { select: { title: true, firstName: true, lastName: true } } },
+      include: { organization: { select: { id: true, name: true, type: true } }, practitioner: { select: { title: true, firstName: true, lastName: true, verificationStatus: true } } },
       orderBy: { createdAt: 'asc' },
     });
     return {
@@ -81,6 +81,8 @@ export class ProService {
         role: m.role,
         practitionerId: m.practitionerId,
         displayName: m.practitioner ? practitionerName(m.practitioner) : m.role === 'SECRETARY' ? 'Secrétariat' : 'Direction',
+        /** The member's own practitioner file: PENDING until the back-office validates it (SPEC-07 §4). */
+        verificationStatus: m.practitioner?.verificationStatus ?? null,
       })),
     };
   }

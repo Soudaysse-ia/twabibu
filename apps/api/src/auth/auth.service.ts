@@ -80,6 +80,20 @@ export class AuthService {
     return { status: 'SIGNUP_REQUIRED', signupToken };
   }
 
+  /** E-mail address behind a sign-up token (after the code was checked), without using the token up. */
+  async signupEmail(signupToken: string): Promise<string> {
+    const email = await this.redis.client.get(`twabibu:signup:${sha256(signupToken)}`);
+    if (!email) throw new ApiException('OTP_EXPIRED', 'Signup token expired, request a new code');
+    if (await this.prisma.user.findUnique({ where: { email } })) throw new ApiException('CONFLICT', 'Email already registered');
+    return email;
+  }
+
+  /** Uses the sign-up token up and opens the first session of the new account. */
+  async completeSignup(signupToken: string, userId: string, meta: { userAgent?: string; ip?: string }): Promise<string> {
+    await this.redis.client.del(`twabibu:signup:${sha256(signupToken)}`);
+    return this.createSession(userId, meta);
+  }
+
   async signupPatient(input: PatientSignup, meta: { userAgent?: string; ip?: string }): Promise<string> {
     const key = `twabibu:signup:${sha256(input.signupToken)}`;
     const email = await this.redis.client.get(key);
