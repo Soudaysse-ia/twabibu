@@ -5,6 +5,7 @@
 import { PrismaClient, type IslandCode } from '@prisma/client';
 import { REFERENCE_ISLANDS, REFERENCE_LOCALITIES, REFERENCE_SPECIALITIES } from '@twabibu/contracts';
 import { addDaysToDateKey, slugify, zonedToUtc } from '@twabibu/utils';
+import { appEnvFrom, DEMO_ADMIN_EMAILS, demoAdminsAllowed, demoDataAllowed } from '../src/common/environment.js';
 import { FieldCrypto } from '../src/common/field-crypto.js';
 
 const prisma = new PrismaClient();
@@ -397,14 +398,21 @@ const FEATURE_FLAGS = [
 async function seedDemoBackOffice() {
   for (const [key, description] of FEATURE_FLAGS) await prisma.featureFlag.upsert({ where: { key }, update: { description }, create: { key, description } });
 
-  const admins: [string, string[]][] = [
-    ['admin@demo.twabibu.km', ['SUPERADMIN']],
-    ['verification@demo.twabibu.km', ['VERIFIER']],
-    ['support@demo.twabibu.km', ['SUPPORT']],
-  ];
-  for (const [email, adminRoles] of admins) {
-    // Second factor: in dev (EMAIL_PROVIDER=fake) the code 000000 is accepted after scanning or skipping the QR code.
-    await prisma.user.upsert({ where: { email }, update: { adminRoles, kind: 'PLATFORM_ADMIN' }, create: { email, emailVerifiedAt: new Date(), kind: 'PLATFORM_ADMIN', adminRoles } });
+  if (demoAdminsAllowed(appEnvFrom(process.env))) {
+    const roles: Record<(typeof DEMO_ADMIN_EMAILS)[number], string[]> = {
+      'admin@demo.twabibu.km': ['SUPERADMIN'],
+      'verification@demo.twabibu.km': ['VERIFIER'],
+      'support@demo.twabibu.km': ['SUPPORT'],
+    };
+    for (const email of DEMO_ADMIN_EMAILS) {
+      // Second factor: in dev (EMAIL_PROVIDER=fake) the code 000000 is accepted after scanning or skipping the QR code.
+      await prisma.user.upsert({ where: { email }, update: { adminRoles: roles[email], kind: 'PLATFORM_ADMIN' }, create: { email, emailVerifiedAt: new Date(), kind: 'PLATFORM_ADMIN', adminRoles: roles[email] } });
+    }
+  } else {
+    // Hosted demo (staging): no shared back-office account. Real ones are made with admin:create. Accounts left by an
+    // older seed are switched off, so nobody can enrol a second factor on them.
+    const { count } = await prisma.user.updateMany({ where: { email: { in: [...DEMO_ADMIN_EMAILS] }, kind: 'PLATFORM_ADMIN', status: 'ACTIVE' }, data: { status: 'SUSPENDED', adminRoles: [] } });
+    if (count) console.log(`Comptes d’administration de démo désactivés : ${count}`);
   }
 
   const org = await prisma.organization.upsert({
@@ -625,7 +633,8 @@ async function main() {
     holidays: await prisma.holiday.count(), drugs: await prisma.drug.count(),
   };
   console.log('Référentiels :', counts);
-  if (process.env.NODE_ENV === 'production') {
+  // The hosted demo (APP_ENV=staging) runs a production build with demo data; real production never gets any (ADR-020).
+  if (!demoDataAllowed(appEnvFrom(process.env))) {
     console.log('Production : aucune donnée de démonstration.');
     return;
   }

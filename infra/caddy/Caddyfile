@@ -1,0 +1,63 @@
+# Twabibu: TLS and reverse proxy in front of the site and the back-office (ADR-009, ADR-020).
+# Values come from the environment (see infra/env/*.env.example):
+#   SITE_DOMAIN        twabibu.km or staging.twabibu.km
+#   ADMIN_DOMAIN       admin.twabibu.km (back-office, never indexed)
+#   ADMIN_ALLOWED_IPS  space-separated addresses or ranges allowed on the back-office
+#   TLS_MODE           acme (Let's Encrypt, DNS-only record) or origin (Cloudflare origin certificate in ./certs)
+# The API is not exposed: the site proxies /api/* to it inside the Docker network.
+{
+	servers {
+		# Behind Cloudflare, the visitor's address arrives in CF-Connecting-IP. Only trusted from Cloudflare ranges, and
+		# only that header (X-Forwarded-For can carry anything a client wrote).
+		trusted_proxies static 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+		client_ip_headers CF-Connecting-IP
+	}
+}
+
+(tls-acme) {
+	# Automatic certificate from Let's Encrypt.
+}
+
+(tls-origin) {
+	# Cloudflare origin certificate (SSL/TLS mode « Full (strict) »), valid 15 years.
+	tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key
+}
+
+(common) {
+	import tls-{$TLS_MODE}
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+	log {
+		output stdout
+		format json
+	}
+}
+
+# The visitor's address for the API (audit log, sessions): Caddy replaces whatever X-Forwarded-For the client sent.
+(to-app) {
+	reverse_proxy {args[0]} {
+		header_up X-Forwarded-For {client_ip}
+	}
+}
+
+{$SITE_DOMAIN} {
+	import common
+	import to-app web:3000
+}
+
+www.{$SITE_DOMAIN} {
+	import tls-{$TLS_MODE}
+	redir https://{$SITE_DOMAIN}{uri} permanent
+}
+
+{$ADMIN_DOMAIN} {
+	import common
+	header X-Robots-Tag "noindex, nofollow"
+	@outside not client_ip {$ADMIN_ALLOWED_IPS}
+	respond @outside "Accès réservé." 403
+	import to-app admin:3000
+}

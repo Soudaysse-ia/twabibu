@@ -15,8 +15,8 @@ Statut : ☐ à faire · ◐ en cours · ☑ fait. Mettre à jour ce fichier à 
 |---|---|---|---|
 | ☑ INFRA-01 | Monorepo pnpm + Turborepo, configs partagées, Docker Compose dev, `.env.example`, `README` de démarrage | — | M |
 | ☑ INFRA-02 | CI GitHub Actions (lint, typecheck, test, build, e2e smoke), Dependabot, cache pnpm | INFRA-01 | S |
-| ☐ INFRA-03 | Production : Docker Compose prod, Caddyfile, Cloudflare, sauvegardes pgBackRest, scripts restauration | API-01, WEB-01 | L |
-| ☐ INFRA-04 | Déploiement staging (sur `main`) et prod (sur tag), migrations, rollback | INFRA-03 | M |
+| ◐ INFRA-03 | Production : Docker Compose prod, Caddyfile, Cloudflare, sauvegardes pgBackRest, scripts restauration — fait le 19/11/2026 : images distroless, `docker-compose.prod.yml`, Caddy (Let’s Encrypt ou certificat d’origine Cloudflare, back-office limité par IP), sauvegarde `pg_dump` quotidienne avec copie chiffrée hors serveur et test de restauration mensuel, script d’installation du serveur, procédures (ADR-020) ; reste : archivage continu (pgBackRest), installation réelle chez Hetzner | API-01, WEB-01 | L |
+| ◐ INFRA-04 | Déploiement staging (sur `main`) et prod (sur tag), migrations, rollback — workflow `deploy.yml` (images sur GitHub Packages, déploiement SSH, sauvegarde puis migrations, retour arrière manuel) prêt le 19/11/2026 ; à activer avec `DEPLOY_ENABLED` quand les serveurs existent | INFRA-03 | M |
 | ☐ INFRA-05 | Observabilité : Sentry, logs pino → Loki, métriques, Uptime Kuma, alertes | INFRA-03 | M |
 
 ## EPIC DATA / API / CONTRACTS

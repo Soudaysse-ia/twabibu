@@ -2,6 +2,11 @@ import { z } from 'zod';
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  /**
+   * Where a production build runs. `staging` is the hosted demo (ADR-020): fake e-mail and SMS allowed, code 000000.
+   * `production` refuses fake providers.
+   */
+  APP_ENV: z.enum(['local', 'staging', 'production']).default('local'),
   API_PORT: z.coerce.number().int().default(4000),
   APP_URL: z.url().default('http://localhost:3100'),
   DATABASE_URL: z.string().min(1),
@@ -27,8 +32,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     const issues = parsed.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`).join('\n');
     throw new Error(`Invalid environment (see .env.example):\n${issues}`);
   }
-  if (parsed.data.NODE_ENV === 'production' && parsed.data.EMAIL_PROVIDER === 'fake') {
-    throw new Error('EMAIL_PROVIDER=fake is not allowed in production');
+  if (parsed.data.NODE_ENV === 'production' && parsed.data.APP_ENV === 'local') {
+    throw new Error('Set APP_ENV=staging or APP_ENV=production for a production build');
+  }
+  // E-mail carries the sign-in codes (ADR-016): production must send real ones. SMS is a fallback with no real
+  // provider yet, so production may start with SMS_PROVIDER=fake (messages are only logged).
+  if (parsed.data.APP_ENV === 'production' && parsed.data.EMAIL_PROVIDER === 'fake') {
+    throw new Error('EMAIL_PROVIDER=fake is not allowed with APP_ENV=production');
   }
   if (parsed.data.EMAIL_PROVIDER !== 'fake' && !parsed.data.EMAIL_API_KEY) {
     throw new Error(`EMAIL_API_KEY is required with EMAIL_PROVIDER=${parsed.data.EMAIL_PROVIDER}`);

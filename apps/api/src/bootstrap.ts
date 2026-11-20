@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
 import { AllExceptionsFilter } from './common/http-exception.filter.js';
@@ -8,7 +9,11 @@ import { API_VERSION, loadConfig, type AppConfig } from './config.js';
 
 /** Builds the HTTP application. Shared by main.ts and the integration tests. */
 export async function createApp(config: AppConfig = loadConfig()): Promise<INestApplication> {
-  const app = await NestFactory.create(AppModule.forRoot(config), { logger: config.NODE_ENV === 'test' ? false : undefined });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule.forRoot(config), { logger: config.NODE_ENV === 'test' ? false : undefined });
+  // The API is only reachable from the private Docker network (ADR-020): Caddy writes the visitor's address in
+  // X-Forwarded-For and the site passes it on. Trust that header from private addresses only, so req.ip (audit log,
+  // sessions) is the visitor and not the site's container. Never publish the API port directly.
+  app.set('trust proxy', 'loopback, linklocal, uniquelocal');
   app.useGlobalFilters(new AllExceptionsFilter());
   app.enableCors({ origin: [config.APP_URL], credentials: true });
   app.enableShutdownHooks();

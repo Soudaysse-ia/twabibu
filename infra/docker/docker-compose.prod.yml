@@ -1,0 +1,99 @@
+# Production and staging (ADR-009, ADR-020): one Hetzner server per environment, same file.
+# On the server it lives in /srv/twabibu next to .env, Caddyfile and scripts/. Only Caddy is reachable from outside.
+#   docker compose up -d --wait                     # start or update everything
+#   docker compose run --rm api node_modules/prisma/build/index.js migrate deploy
+# The image tag (TAG) and registry (REGISTRY) come from .env; scripts/deploy.sh updates TAG.
+name: twabibu
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "5" }
+
+x-app: &app
+  restart: unless-stopped
+  logging: *logging
+  networks: [internal]
+  env_file: .env
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    logging: *logging
+    networks: [internal]
+    shm_size: 256mb
+    environment:
+      POSTGRES_USER: twabibu
+      POSTGRES_DB: twabibu
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U twabibu -d twabibu"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    logging: *logging
+    networks: [internal]
+    # Slot locks and job queues must never be evicted; append-only file survives restarts.
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 20
+
+  api:
+    <<: *app
+    image: ${REGISTRY:-ghcr.io/soudaysse-ia}/twabibu-api:${TAG:?set TAG in .env}
+    environment:
+      NODE_ENV: production
+      API_PORT: "4000"
+      DATABASE_URL: postgresql://twabibu:${POSTGRES_PASSWORD}@postgres:5432/twabibu
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  web:
+    <<: *app
+    image: ${REGISTRY:-ghcr.io/soudaysse-ia}/twabibu-web:${TAG}
+    environment: { API_INTERNAL_URL: "http://api:4000" }
+    depends_on:
+      api: { condition: service_healthy }
+
+  admin:
+    <<: *app
+    image: ${REGISTRY:-ghcr.io/soudaysse-ia}/twabibu-admin:${TAG}
+    environment: { API_INTERNAL_URL: "http://api:4000" }
+    depends_on:
+      api: { condition: service_healthy }
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    logging: *logging
+    networks: [internal]
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?set SITE_DOMAIN in .env}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN:?set ADMIN_DOMAIN in .env}
+      ADMIN_ALLOWED_IPS: ${ADMIN_ALLOWED_IPS:-0.0.0.0/0 ::/0}
+      TLS_MODE: ${TLS_MODE:-acme}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/etc/caddy/certs:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web, admin]
+
+networks:
+  internal: {}
+
+volumes:
+  pgdata: {}
+  redisdata: {}
+  caddy_data: {}
+  caddy_config: {}
