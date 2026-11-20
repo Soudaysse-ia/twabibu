@@ -26,6 +26,18 @@ describe('Twabibu API', () => {
     assert.deepEqual(health.checks, { database: true, redis: true });
   });
 
+  it('refuses a write sent by another web site (SEC-03)', async () => {
+    const config = loadConfig({ ...process.env, NODE_ENV: 'test' });
+    const refused = await request(app.getHttpServer())
+      .post('/v1/auth/otp/request')
+      .set('Origin', 'https://evil.example')
+      .send({ email: 'csrf@example.com' })
+      .expect(403);
+    assert.equal(ApiErrorSchema.parse(refused.body).code, 'FORBIDDEN');
+    // The site's own origin goes through to validation.
+    await request(app.getHttpServer()).post('/v1/auth/otp/request').set('Origin', new URL(config.APP_URL).origin).send({}).expect(400);
+  });
+
   it('serves the three islands and the seeded localities', async () => {
     const islands = await request(app.getHttpServer()).get('/v1/directory/islands').expect(200);
     assert.deepEqual(islands.body.map((i: { slug: string }) => i.slug).sort(), ['mwali', 'ndzuani', 'ngazidja']);

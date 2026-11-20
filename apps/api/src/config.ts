@@ -9,6 +9,8 @@ const EnvSchema = z.object({
   APP_ENV: z.enum(['local', 'staging', 'production']).default('local'),
   API_PORT: z.coerce.number().int().default(4000),
   APP_URL: z.url().default('http://localhost:3100'),
+  /** Back-office origin (apps/admin). Writes from any other origin are refused (SEC-03). */
+  ADMIN_URL: z.url().default('http://localhost:3200'),
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().default('redis://localhost:6379'),
   DEFAULT_TIMEZONE: z.string().default('Indian/Comoro'),

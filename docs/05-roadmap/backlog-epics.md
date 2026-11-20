@@ -76,7 +76,7 @@ AVAIL-01 ☑ · AVAIL-02 ☑ · AVAIL-03 ☑ · AVAIL-04 ☑ · AVAIL-05 ☐ (pa
 |---|---|---|
 | ☐ SEC-01 | Chiffrement applicatif (notes, pièces), gestion des clés, rotation | M |
 | ☐ SEC-02 | Tests d'autorisation systématiques (matrice SPEC-07) + tests IDOR | M |
-| ☐ SEC-03 | En-têtes de sécurité, CSP, cookies, CSRF, audit `pnpm audit` en CI | S |
+| ☑ SEC-03 | En-têtes de sécurité, CSP, cookies, CSRF, audit `pnpm audit` en CI — fait le 20/11/2026 (ADR-021) : écritures refusées hors du site et du back-office (`Origin`, `Sec-Fetch-Site`), CSP sur le site et le back-office, `pnpm audit --prod` en CI, deux failles indirectes de Prisma corrigées | S |
 | ☐ SEC-04 | Revue de sécurité externe avant lancement + corrections | L |
 | ◐ QA-01 | Playwright : parcours P1–P6, desktop + mobile, données seed — fait le 19/11/2026 : P1 (ordinateur et téléphone), P2, P3 + P6, P7, job CI « Parcours de bout en bout » ; restent P4 (secrétariat), P5 (absence), P8 (ordonnance → pharmacie) | L |
 | ☐ QA-02 | Audit accessibilité (axe + manuel lecteur d'écran) et corrections | M |
