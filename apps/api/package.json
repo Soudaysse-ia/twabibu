@@ -34,7 +34,7 @@
   "devDependencies": {
     "@nestjs/testing": "^12.4.2",
     "@types/express": "^5.0.0",
-    "@types/node": "^24.0.0",
+    "@types/node": "^26.6.6",
     "@types/supertest": "^6.0.0",
     "dotenv-cli": "^8.0.0",
     "prisma": "~6.19.3",
