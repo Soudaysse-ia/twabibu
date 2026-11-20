@@ -34,7 +34,12 @@ export function ProDashboard() {
   if (!d) return <p className="p-6 text-text-muted">{error ?? 'Chargement…'}</p>;
   const hour = Number(new Date().toLocaleString('fr-FR', { timeZone: 'Indian/Comoro', hour: '2-digit', hour12: false }));
   const tiles = [
-    { icon: CalendarDays, label: 'Aujourd’hui', value: d.today.total, hint: `${d.today.remaining} à venir · ${d.today.done} terminé${d.today.done > 1 ? 's' : ''}` },
+    {
+      icon: CalendarDays,
+      label: 'Aujourd’hui',
+      value: d.today.total,
+      hint: [`${d.today.remaining} à venir`, `${d.today.done} terminé${d.today.done > 1 ? 's' : ''}`, d.today.toClose ? `${d.today.toClose} à clôturer` : null].filter(Boolean).join(' · '),
+    },
     { icon: CalendarClock, label: '7 prochains jours', value: d.nextSevenDays, hint: 'rendez-vous prévus' },
     { icon: Users, label: '30 derniers jours', value: d.last30Days.appointments, hint: `${d.last30Days.online} pris en ligne` },
     { icon: UserX, label: 'Absences (30 j)', value: d.last30Days.noShows, hint: 'rendez-vous non honorés' },
@@ -97,6 +102,7 @@ export function ProDashboard() {
                         <div className="mt-1 flex flex-wrap gap-1">
                           {isNext ? <Badge tone="info">Prochain patient</Badge> : null}
                           <Badge tone={st.tone}>{st.label}</Badge>
+                          {a.toClose ? <Badge tone="warning">À clôturer</Badge> : null}
                           {a.confirmedByPatient ? <Badge tone="success">Présence confirmée</Badge> : null}
                           {a.patient.noShowCount ? <Badge tone="warning">{a.patient.noShowCount} absence{a.patient.noShowCount > 1 ? 's' : ''}</Badge> : null}
                         </div>
@@ -131,16 +137,18 @@ export function ProDashboard() {
             ) : (
               <ul className="flex flex-col gap-2 text-sm">
                 {d.pending.map((p) => (
-                  <li key={p.id} className="flex flex-col">
-                    <span className="font-medium text-ink">{p.patient.name}</span>
-                    <span className="text-text-muted first-letter:uppercase">
-                      {formatDateLong(new Date(p.startsAt))} à {formatTime(new Date(p.startsAt))} · {p.motive}
-                    </span>
+                  <li key={p.id}>
+                    <Link href={`/pro/app/agenda?rdv=${p.id}`} className="-mx-2 flex min-h-11 flex-col justify-center rounded-md px-2 py-1 hover:bg-background-soft" aria-label={`Répondre à la demande de ${p.patient.name}`}>
+                      <span className="font-medium text-primary">{p.patient.name}</span>
+                      <span className="text-text-muted first-letter:uppercase">
+                        {formatDateLong(new Date(p.startsAt))} à {formatTime(new Date(p.startsAt))} · {p.motive}
+                      </span>
+                    </Link>
                   </li>
                 ))}
                 <li>
                   <Link href="/pro/app/agenda" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-                    Valider dans l’agenda <ChevronRight aria-hidden="true" size={14} />
+                    Voir l’agenda <ChevronRight aria-hidden="true" size={14} />
                   </Link>
                 </li>
               </ul>

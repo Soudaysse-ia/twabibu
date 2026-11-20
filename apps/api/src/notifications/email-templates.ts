@@ -77,6 +77,14 @@ export const emailTemplates = {
   appointmentPending: (d: AppointmentEmailData) =>
     appointmentEmail('Demande de rendez-vous envoyée', 'Votre demande est envoyée', 'Le cabinet doit valider votre demande de rendez-vous :', d, 'Vous recevrez sa réponse par e-mail.', 'Voir ma demande'),
 
+  /** The practice accepted an online request (SPEC-05 §Règles 6). */
+  appointmentAccepted: (d: AppointmentEmailData) =>
+    appointmentEmail(`Rendez-vous confirmé le ${formatDateLong(d.startsAt)}`, 'Votre demande est acceptée', 'Le cabinet a accepté votre demande. Votre rendez-vous est confirmé :', d, 'Vous recevrez un rappel la veille. Si vous ne pouvez pas venir, annulez-le pour libérer la place.', 'Gérer mon rendez-vous'),
+
+  /** The practice declined an online request: no reason is sent, the patient can pick another time. */
+  appointmentRefused: (d: AppointmentEmailData) =>
+    appointmentEmail('Votre demande de rendez-vous n’a pas été acceptée', 'Votre demande n’a pas été acceptée', 'Le cabinet ne peut pas vous recevoir à l’horaire demandé :', d, 'Vous pouvez choisir un autre créneau en ligne.', 'Choisir un autre créneau'),
+
   appointmentRescheduled: (d: AppointmentEmailData) =>
     appointmentEmail(`Rendez-vous déplacé au ${formatDateLong(d.startsAt)}`, 'Votre rendez-vous a été déplacé', 'Le cabinet a déplacé votre rendez-vous. Nouvelle date :', d, 'Si cet horaire ne vous convient pas, contactez le cabinet.', 'Voir mon rendez-vous'),
 

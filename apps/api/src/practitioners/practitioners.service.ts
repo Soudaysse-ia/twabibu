@@ -40,6 +40,13 @@ export interface SearchParams {
   lng?: number;
   page: number;
   patientProfileId?: string | null;
+  /** Has a free online slot within this many days (0 = today). */
+  dispo?: number;
+  langues?: string[];
+  paiement?: string[];
+  assurance?: string;
+  nouveaux?: boolean;
+  tri?: 'pertinence' | 'dispo' | 'distance';
 }
 
 @Injectable()
@@ -184,6 +191,37 @@ export class PractitionersService {
       rows = rows.filter((p) => (distances.get(p.id) ?? Infinity) <= AROUND_ME_RADIUS_KM).sort((a, b) => distances.get(a.id)! - distances.get(b.id)!);
     }
 
+    // Filter options come from the results before filtering, so a choice never empties its own list (SPEC-01 §7).
+    const languageCodes = [...new Set(rows.flatMap((p) => p.languages))];
+    const languageNames = await this.prisma.language.findMany({ where: { code: { in: languageCodes } } });
+    const facets = {
+      languages: languageCodes.map((code) => ({ code, name: languageNames.find((l) => l.code === code)?.name ?? code })).sort((a, b) => a.name.localeCompare(b.name, 'fr')),
+      paymentMethods: [...new Set(rows.flatMap((p) => p.paymentMethods))].map((code) => ({ code, name: PAYMENT_LABELS[code] ?? code })),
+      insurances: [...new Set(rows.flatMap((p) => p.insurancesAccepted))].sort((a, b) => a.localeCompare(b, 'fr')),
+    };
+    if (params.langues?.length) rows = rows.filter((p) => params.langues!.some((l) => p.languages.includes(l)));
+    if (params.paiement?.length) rows = rows.filter((p) => params.paiement!.some((m) => p.paymentMethods.includes(m)));
+    if (params.assurance) rows = rows.filter((p) => p.insurancesAccepted.includes(params.assurance!));
+    if (params.nouveaux) rows = rows.filter((p) => p.acceptsNewPatients);
+
+    // Availability filter and sort need each practitioner's first online slot (computed once).
+    const firstSlots = new Map<string, number>();
+    if (params.dispo !== undefined || params.tri === 'dispo') {
+      const horizon = params.dispo ?? 60;
+      await Promise.all(
+        rows.map(async (p) => {
+          const agenda = p.agendas[0];
+          const motive = agenda?.motives.find((m) => m.newPatientsAllowed) ?? agenda?.motives[0];
+          if (!agenda || !motive) return;
+          const first = await this.availability.firstSlot(agenda.id, motive.id, Math.min(horizon, agenda.bookingHorizonDays), { source: 'ONLINE', patientProfileId: params.patientProfileId });
+          if (first) firstSlots.set(p.id, first.getTime());
+        }),
+      );
+      if (params.dispo !== undefined) rows = rows.filter((p) => firstSlots.has(p.id));
+      if (params.tri === 'dispo') rows = [...rows].sort((a, b) => (firstSlots.get(a.id) ?? Infinity) - (firstSlots.get(b.id) ?? Infinity));
+    }
+    if (params.tri === 'distance' && origin) rows = [...rows].sort((a, b) => (distances.get(a.id) ?? Infinity) - (distances.get(b.id) ?? Infinity));
+
     const total = rows.length;
     const page = rows.slice((params.page - 1) * PAGE_SIZE, params.page * PAGE_SIZE);
     const today = toDateKey(new Date());
@@ -224,6 +262,9 @@ export class PractitionersService {
             locality: practice.locality.name,
             island: practice.locality.island.name,
             distanceKm: distances.has(p.id) ? Math.round(distances.get(p.id)! * 10) / 10 : null,
+            // Map position: the practice, or its locality when the practice has no coordinates.
+            lat: practice.lat ?? practice.locality.lat,
+            lng: practice.lng ?? practice.locality.lng,
           },
           languages: p.languages,
           priceFromKmf: prices.length ? Math.min(...prices) : null,
@@ -234,6 +275,6 @@ export class PractitionersService {
         };
       }),
     );
-    return { items, total, page: params.page, pageSize: PAGE_SIZE };
+    return { items, total, page: params.page, pageSize: PAGE_SIZE, facets };
   }
 }

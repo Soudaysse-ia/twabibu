@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, HttpCode, Inject, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, HttpCode, Inject, Param, ParseUUIDPipe, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { z } from 'zod';
@@ -13,6 +13,7 @@ import { ZodValidationPipe } from '../common/zod-validation.pipe.js';
 import { BookingService } from './booking.service.js';
 
 const SlotSchema = z.object({ agendaId: z.uuid(), motiveId: z.uuid(), startsAt: z.iso.datetime().transform((v) => new Date(v)) });
+const RescheduleSchema = z.object({ startsAt: z.iso.datetime().transform((v) => new Date(v)) });
 const UnlockSchema = z.object({ agendaId: z.uuid(), startsAt: z.iso.datetime().transform((v) => new Date(v)) });
 const today = () => new Date().toISOString().slice(0, 10);
 const BookSchema = SlotSchema.extend({
@@ -28,6 +29,8 @@ const BookSchema = SlotSchema.extend({
   answers: z.record(z.string(), z.string().max(200)).optional(),
   instructionsAccepted: z.literal(true),
   patientMessage: z.string().trim().max(200).optional(),
+  /** The patient lets this practice see their whole medical record (SPEC-13 §Carnet). Never for a relative. */
+  shareRecord: z.boolean().default(false),
 }).refine((v) => !(v.relativeId && v.newRelative), 'Choose an existing relative or a new one, not both');
 
 @ApiTags('booking')
@@ -72,5 +75,14 @@ export class BookingController {
     const session = readCookie(req, BOOKING_COOKIE);
     if (!session) throw new ApiException('SLOT_LOCK_EXPIRED', 'No slot held for this session');
     return this.booking.book(body, user, session);
+  }
+
+  @Post('appointments/:id/reschedule')
+  @HttpCode(201)
+  @UseGuards(PatientGuard)
+  @ApiOperation({ summary: 'Déplace un rendez-vous du patient sur le créneau tenu par cette session (même soignant, même motif).' })
+  async reschedule(@Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodValidationPipe(RescheduleSchema)) body: z.infer<typeof RescheduleSchema>, @CurrentUser() user: SessionUser, @Req() req: AuthedRequest) {
+    // Ownership is checked before the slot lock: someone else's appointment is « not found », whatever the cookie.
+    return this.booking.reschedule(user, id, body.startsAt, readCookie(req, BOOKING_COOKIE) ?? '');
   }
 }

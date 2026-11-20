@@ -37,6 +37,7 @@ describe('Booking flow', () => {
       const users = await prisma.user.findMany({ where: { email: { in: emails } }, include: { patientProfile: true } });
       const profileIds = users.map((u) => u.patientProfile?.id).filter((id): id is string => !!id);
       await prisma.appointment.deleteMany({ where: { patientProfileId: { in: profileIds } } });
+      await prisma.medicalRecord.deleteMany({ where: { patientProfileId: { in: profileIds } } });
       await prisma.patientRecord.deleteMany({ where: { patientProfileId: { in: profileIds } } });
       await prisma.user.deleteMany({ where: { id: { in: users.map((u) => u.id) } } });
       await prisma.notification.deleteMany({ where: { recipient: { in: emails } } });
@@ -103,6 +104,28 @@ describe('Booking flow', () => {
     assert.equal(profile.body.slug, first.slug);
     assert.ok(profile.body.agenda.motives.length > 0);
     await request(app.getHttpServer()).get('/v1/practitioners/does-not-exist').expect(404);
+  });
+
+  it('filters results by language, payment, availability and new patients, with options and map positions', async () => {
+    const get = (qs: string) => request(app.getHttpServer()).get(`/v1/search/practitioners?${qs}`);
+    const all = (await get('').expect(200)).body;
+    const slugs = (body: { items: { slug: string }[] }) => body.items.map((i) => i.slug);
+    assert.ok(all.facets.languages.some((l: { code: string }) => l.code === 'ar'));
+    assert.ok(all.facets.paymentMethods.some((m: { code: string; name: string }) => m.code === 'MVOLA' && m.name === 'MVola'));
+    assert.equal(typeof all.items[0].practice.lat, 'number');
+
+    const arabic = (await get('langues=ar').expect(200)).body;
+    assert.ok(slugs(arabic).includes('amina-said'));
+    assert.ok(!slugs(arabic).includes('ibrahim-mohamed'), 'does not speak Arabic');
+    assert.ok(arabic.total < all.total);
+    assert.deepEqual(arabic.facets, all.facets, 'options do not shrink when one is chosen');
+
+    const soon = (await get('dispo=14&tri=dispo').expect(200)).body;
+    assert.ok(soon.total >= 1 && soon.total <= all.total);
+    assert.ok(soon.items.every((i: { days: { slots: string[] }[]; nextAvailabilityAt: string | null }) => i.days.some((d) => d.slots.length) || i.nextAvailabilityAt));
+    assert.equal((await get('nouveaux=1').expect(200)).body.items.every((i: { acceptsNewPatients: boolean }) => i.acceptsNewPatients), true);
+    assert.equal((await get('paiement=INCONNU').expect(200)).body.total, 0);
+    await get('dispo=5').expect(400);
   });
 
   it('holds a slot for one visitor, books it, confirms by e-mail, and lets the patient cancel', async () => {
@@ -187,5 +210,77 @@ describe('Booking flow', () => {
     const reopened = (await bob.get(query).expect(200)).body.days.flatMap((d: { slots: { startsAt: string }[] }) => d.slots.map((s) => s.startsAt));
     assert.ok(reopened.includes(slot.startsAt), 'a cancelled slot is bookable again');
     assert.ok(await prisma.notification.findFirst({ where: { recipient: aliceEmail, template: 'appointment.cancelled_by_patient', channel: 'EMAIL' } }));
+  });
+
+  it('shares the record with the practice only when the patient ticks the box, and never a relative’s', async () => {
+    const profile = (await request(app.getHttpServer()).get('/v1/practitioners/amina-said').expect(200)).body;
+    const motive = profile.agenda.motives[0];
+    const from = addDaysToDateKey(toDateKey(new Date()), 10);
+    const avail = (await request(app.getHttpServer()).get(`/v1/practitioners/amina-said/availabilities?motiveId=${motive.id}&from=${from}&to=${addDaysToDateKey(from, 13)}`).expect(200)).body;
+    const slots = avail.days.flatMap((d: { slots: { startsAt: string }[] }) => d.slots);
+    assert.ok(slots.length >= 2, 'demo agenda should have slots');
+
+    const patient = request.agent(app.getHttpServer());
+    const address = email();
+    emails.push(address);
+    await signUp(patient, address, 'Salma');
+    const book = async (startsAt: string, extra: object) => {
+      const body = { agendaId: avail.agendaId, motiveId: motive.id, startsAt };
+      await patient.post('/v1/booking/locks').send(body).expect(201);
+      return (await patient.post('/v1/booking/appointments').send({ ...body, instructionsAccepted: true, ...extra }).expect(201)).body;
+    };
+    const shared = () => patient.get('/v1/me/record/consents').expect(200).then((r) => r.body.find((c: { organizationSlug: string }) => c.organizationSlug === 'clinique-demo-al-kamar'));
+
+    // For a relative, the box has no effect on the account holder's record.
+    await book(slots[0].startsAt, { shareRecord: true, newRelative: { firstName: 'Ilyas', lastName: 'Patient', birthDate: '2020-01-01', relationship: 'ENFANT' } });
+    assert.equal(await shared(), undefined, 'no file of her own in this practice yet');
+
+    await book(slots[1].startsAt, { shareRecord: true });
+    const consent = await shared();
+    assert.equal(consent.shared, true);
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: address }, include: { patientProfile: true } });
+    const record = await prisma.medicalRecord.findUniqueOrThrow({ where: { patientProfileId: user.patientProfile!.id }, include: { consents: true } });
+    assert.deepEqual(record.consents.map((c) => c.grantedVia), ['booking']);
+  });
+
+  it('lets the patient move an appointment to another free slot, with one message and a link to the old one', async () => {
+    const profile = (await request(app.getHttpServer()).get('/v1/practitioners/amina-said').expect(200)).body;
+    const motive = profile.agenda.motives[0];
+    const from = addDaysToDateKey(toDateKey(new Date()), 20);
+    const avail = (await request(app.getHttpServer()).get(`/v1/practitioners/amina-said/availabilities?motiveId=${motive.id}&from=${from}&to=${addDaysToDateKey(from, 13)}`).expect(200)).body;
+    const slots = avail.days.flatMap((d: { slots: { startsAt: string }[] }) => d.slots);
+    assert.ok(slots.length >= 2, 'demo agenda should have slots');
+
+    const patient = request.agent(app.getHttpServer());
+    const address = email();
+    emails.push(address);
+    await signUp(patient, address, 'Moussa');
+    const first = { agendaId: avail.agendaId, motiveId: motive.id, startsAt: slots[0].startsAt };
+    await patient.post('/v1/booking/locks').send(first).expect(201);
+    const booked = (await patient.post('/v1/booking/appointments').send({ ...first, instructionsAccepted: true }).expect(201)).body;
+
+    // Without holding the new slot first, nothing moves.
+    const target = slots[slots.length - 1].startsAt;
+    assert.equal((await patient.post(`/v1/booking/appointments/${booked.id}/reschedule`).send({ startsAt: target }).expect(410)).body.code, 'SLOT_LOCK_EXPIRED');
+
+    await patient.post('/v1/booking/locks').send({ ...first, startsAt: target }).expect(201);
+    const moved = (await patient.post(`/v1/booking/appointments/${booked.id}/reschedule`).send({ startsAt: target }).expect(201)).body;
+    assert.equal(moved.startsAt, target);
+    assert.notEqual(moved.id, booked.id);
+    const old = await prisma.appointment.findUniqueOrThrow({ where: { id: booked.id } });
+    assert.equal(old.status, 'CANCELLED_BY_PATIENT');
+    assert.equal((await prisma.appointment.findUniqueOrThrow({ where: { id: moved.id } })).rescheduledFromId, booked.id);
+    const messages = await prisma.notification.findMany({ where: { recipient: address, relatedAppointmentId: { in: [booked.id, moved.id] } }, select: { template: true } });
+    assert.deepEqual(messages.map((m) => m.template).sort(), ['appointment.booked', 'appointment.rescheduled']);
+
+    // The freed slot is bookable again; someone else cannot move this appointment.
+    const day = toDateKey(new Date(slots[0].startsAt));
+    const reopened = (await request(app.getHttpServer()).get(`/v1/practitioners/amina-said/availabilities?motiveId=${motive.id}&from=${day}&to=${day}`).expect(200)).body;
+    assert.ok(reopened.days.flatMap((d: { slots: { startsAt: string }[] }) => d.slots.map((x) => x.startsAt)).includes(slots[0].startsAt));
+    const stranger = request.agent(app.getHttpServer());
+    const strangerEmail = email();
+    emails.push(strangerEmail);
+    await signUp(stranger, strangerEmail, 'Autre');
+    await stranger.post(`/v1/booking/appointments/${moved.id}/reschedule`).send({ startsAt: slots[0].startsAt }).expect(404);
   });
 });

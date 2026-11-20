@@ -4,6 +4,7 @@ import { useId, useState, type FormEvent } from 'react';
 import { Button, cn } from '@twabibu/ui';
 import { api, ApiError, errorMessage } from '@/lib/api-client';
 import type { Me } from '@/lib/types';
+import { isDemo } from '@/lib/demo';
 
 type Step = 'email' | 'code' | 'signup';
 
@@ -170,7 +171,7 @@ export function EmailOtpForm({ onDone, title = 'Identifiez-vous', allowSignup = 
               autoFocus
             />
           </Field>
-          {process.env.NODE_ENV !== 'production' ? (
+          {isDemo() ? (
             <p className="rounded-md bg-warning-soft px-3 py-2 text-xs text-ink">Environnement de test : aucun e-mail n’est envoyé, le code est 000000.</p>
           ) : null}
           <Button type="submit" size="lg" fullWidth disabled={busy}>

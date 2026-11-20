@@ -5,6 +5,7 @@ import { Card, Logo } from '@twabibu/ui';
 import { PharmaSignIn } from '@/components/pharma/PharmaSignIn';
 import { apiGet } from '@/lib/api-server';
 import type { PharmaMe } from '@/lib/pharma-types';
+import { isDemo } from '@/lib/demo';
 
 export const metadata: Metadata = { title: 'Connexion Twabibu Pharma', robots: { index: false } };
 
@@ -30,7 +31,7 @@ export default async function PharmaSignInPage({ searchParams }: { searchParams:
             </p>
           ) : null}
           <PharmaSignIn />
-          {process.env.NODE_ENV !== 'production' ? (
+          {isDemo() ? (
             <p className="text-xs text-text-muted">
               Comptes de démonstration (code 000000) : titulaire.port@demo.twabibu.km (titulaire), preparateur.port@demo.twabibu.km (préparateur), titulaire.medina@demo.twabibu.km.
             </p>

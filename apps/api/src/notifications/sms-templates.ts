@@ -33,6 +33,12 @@ export const smsTemplates = {
   appointmentPending: (d: AppointmentSmsData) =>
     toGsm(`Twabibu : demande de RDV envoyee a ${shorten(d.practitionerName, 28)} pour ${formatSmsDateTime(d.startsAt)}. Vous recevrez une confirmation.`),
 
+  appointmentAccepted: (d: AppointmentSmsData) =>
+    toGsm(`Twabibu : demande acceptee, RDV confirme ${formatSmsDateTime(d.startsAt)} avec ${shorten(d.practitionerName, 28)}, ${shorten(d.locality, 16)}. Gerer : ${d.manageUrl}`),
+
+  appointmentRefused: (d: AppointmentSmsData) =>
+    toGsm(`Twabibu : demande de RDV du ${formatSmsDateTime(d.startsAt)} non acceptee par ${shorten(d.practitionerName, 28)}. Autre creneau : ${d.manageUrl}`),
+
   appointmentRescheduled: (d: AppointmentSmsData) =>
     toGsm(`Twabibu : votre RDV avec ${shorten(d.practitionerName, 28)} est deplace au ${formatSmsDateTime(d.startsAt)}, ${shorten(d.locality, 16)}. Infos : ${d.manageUrl}`),
 

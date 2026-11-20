@@ -204,5 +204,75 @@ Tests automatisés : 112 au total (API 74, dont 3 nouveaux : aucune donnée méd
 - Changer la recherche après « Voir plus » aurait mélangé deux pages de résultats.
 
 ## Écarts et limites
-- Un rendez-vous du jour déjà passé mais non clôturé reste compté « à venir » tant que le praticien ne l’a pas marqué terminé ou absent.
+- ~~Un rendez-vous du jour déjà passé mais non clôturé reste compté « à venir »~~ Corrigé le 19/11/2026 : un rendez-vous terminé à l’horaire mais jamais clôturé n’est plus compté « à venir » ; il porte l’étiquette « À clôturer » et le chiffre du jour l’indique (« 1 à clôturer »). Un patient arrivé ou en consultation reste « en cours » même après l’heure prévue (`apps/api/src/pro/day-summary.ts`, 4 tests).
 - L’accueil ne montre pas les alertes médicales (allergies) des patients du jour : elles restent dans le dossier et dans l’écran de consultation, pour ne pas mettre de données de santé sous les yeux du secrétariat.
+
+# Neuvième lot : validation des demandes en ligne (19 novembre 2026)
+
+Ticket AGENDA-07 (SPEC-05 §Règles 6). Avant ce lot, un cabinet en validation manuelle pouvait passer une demande en « confirmé », mais le patient n’en était pas prévenu, et un refus passait pour une annulation ordinaire.
+
+## Ce qui fonctionne
+- **Tiroir du rendez-vous** : une demande en attente affiche un encadré « Demande en ligne à valider » avec « Accepter la demande » et « Refuser ». Le refus demande un motif interne facultatif (jamais envoyé) et propose de prévenir le patient. Les boutons de statut et « Annuler le rendez-vous » sont masqués tant que la demande n’a pas de réponse.
+- **Messages au patient** (e-mail, SMS de secours) : « Votre demande est acceptée » avec les détails du rendez-vous, ou « Votre demande n’a pas été acceptée » avec un lien vers la page du soignant pour choisir un autre créneau. Les deux SMS tiennent en 160 caractères GSM-7.
+- **Historique** : un refus est inscrit « Demande refusée » (`REFUSED`), distinct d’une annulation.
+- **Accueil** : chaque demande de « Demandes à valider » ouvre l’agenda sur ce rendez-vous (`/pro/app/agenda?rdv=<id>`).
+- **Vue mois de l’agenda** (bouton « Mois ») : pour chaque jour, le nombre de rendez-vous, les demandes à valider, une barre de remplissage des plages en ligne (minutes réservées ÷ minutes ouvertes), le jour férié et les absences ; un clic ouvre la vue jour. Un seul appel à l’API (31 jours au plus). Logique dans `apps/web/lib/agenda-month.ts` (3 tests).
+- **Glisser-déposer dans l’agenda** (vues jour et semaine) : un rendez-vous confirmé et à venir se déplace à la souris ou au stylet, d’un jour à l’autre en vue semaine, par pas de 5 minutes ; le bloc affiche le nouvel horaire pendant le geste. Au lâcher, un panneau montre l’ancien et le nouvel horaire et propose de prévenir le patient (coché par défaut). Un créneau occupé ou une absence affiche un message et rien n’est déplacé. Au doigt, le déplacement reste dans le tiroir du rendez-vous (le geste gênerait le défilement). Logique dans `apps/web/lib/agenda-drag.ts` (4 tests).
+- **Démonstration** : le Dr Amina Saïd a désormais un rendez-vous ce matin non clôturé et deux demandes en ligne à valider (nouvelle base uniquement : `pnpm db:seed` ne recrée pas les rendez-vous d’une base existante).
+- **Bouton « danger »** dans `packages/ui` : les boutons « Confirmer le refus » et « Confirmer l’annulation » (tiroir Pro et compte patient) s’affichaient en bleu, le rouge ajouté par-dessus étant écrasé par la couleur du bouton.
+
+Tests automatisés : tous passent (1 test d’intégration ajouté : acceptation, refus, messages, historique ; 2 modèles SMS ajoutés au test de longueur). Lint, typecheck et build passent. Vérifié dans le navigateur : accueil et tiroir à 1280 px, tiroir et formulaire de refus à 375 px, e-mail « demande acceptée » envoyé (fournisseur factice).
+
+## Écarts et limites
+- Pas de rappel au cabinet quand une demande attend depuis 24 h (prévu par la spec).
+- Accepter une demande dont l’heure est passée reste possible.
+
+# Dixième lot : partage du dossier par le patient (19 novembre 2026)
+
+Question du porteur du projet : « les cabinets et les médecins ont-ils accès aux fiches et aux antécédents de leurs patients pour suivre leur évolution ? ». Constat : oui dans un même cabinet, mais un cabinet ne voyait jamais ce qu’un autre avait noté, car le patient n’avait aucun écran pour donner son accord (l’API existait déjà, RECORD-07).
+
+## Ce qui fonctionne
+- **Page « Partage de mon dossier »** (`/mon-compte/dossier`, liens depuis « Mes rendez-vous » et « Mes ordonnances ») : une explication courte, la liste des cabinets où le patient a une fiche avec « Autoriser l’accès » ou « Retirer l’accès », et la liste « Qui a consulté mon dossier » (établissement, partie consultée, date et heure). Confirmation lue par les lecteurs d’écran (`aria-live`).
+- **API** : un cabinet n’apparaît plus qu’une fois même si le patient y a plusieurs fiches.
+- **Case à la réservation** (étape « Vérifiez et confirmez ») : « Autoriser [cabinet] à voir mon dossier médical complet (facultatif) », décochée par défaut, avec un lien vers « Partage de mon dossier ». Elle n’apparaît que pour un rendez-vous pris pour soi-même, et pas si le dossier est déjà partagé avec ce cabinet. Côté API, champ `shareRecord` de `POST /v1/booking/appointments` ; l’accord est enregistré avec l’origine `booking` (1 test d’intégration : sans effet pour un proche, accord créé pour soi). La liste des accords renvoie aussi l’adresse (`organizationSlug`) du cabinet.
+
+Vérifié dans le navigateur avec un compte patient fictif créé pour l’occasion, rattaché à deux cabinets : page à 1280 px et 375 px, accès autorisé à la clinique, puis côté médecin le dossier passe à « partagé » (`shared: true`) ; la lecture du dossier par le Dr Amina Saïd apparaît dans le journal du patient. Lint, typecheck, build et tests passent.
+
+## Écarts et limites
+- Le dossier des proches (enfants, parents) ne se partage pas encore depuis cette page.
+- Les textes de la page sont écrits dans le composant, comme sur les autres pages « Mon compte », et pas encore dans `packages/i18n`.
+
+# Onzième lot : l’essentiel côté patient et la vitrine de la démo (19 novembre 2026)
+
+Demande du porteur du projet : construire tout ce qui est essentiel à la démo, avec les fonctions principales d’un service de prise de rendez-vous, et les mettre en avant.
+
+## Ce qui fonctionne
+- **Déplacer un rendez-vous** (BOOK-08) : bouton « Déplacer le rendez-vous » dans « Mes rendez-vous », page `/mon-compte/rendez-vous/[id]/deplacer` avec les créneaux libres du même soignant et du même motif (par 2 semaines). Le créneau choisi est tenu 10 minutes, puis `POST /v1/booking/appointments/:id/reschedule` annule l’ancien (`CANCELLED_BY_PATIENT`), crée le nouveau relié par `rescheduledFromId` et envoie un seul message « déplacé ». Même délai que l’annulation en ligne. L’ancien n’est annulé qu’à la confirmation.
+- **Mes soignants** (ACCOUNT-04) : `/mon-compte/soignants`, un bloc par soignant consulté ou réservé (prochain rendez-vous, dernière consultation, pour qui), avec « Prendre rendez-vous » et « Voir le profil ».
+- **Vitrine de la démo** : page `/demo` (les trois espaces avec leurs comptes et un lien vers chaque fonction, trois parcours guidés, les règles de confidentialité déjà tenues) et bandeau « Version de démonstration » en haut du site. Les comptes de démo s’affichent aussi sur les pages de connexion. Tout cela n’apparaît qu’en développement ou avec `NEXT_PUBLIC_DEMO_MODE=true` au build ; sinon `/demo` répond 404.
+
+Tests automatisés : 1 test d’intégration de déplacement (créneau tenu obligatoire, ancien annulé et relié, un seul message, créneau libéré, rendez-vous d’un autre introuvable). Vérifié dans le navigateur à 1280 px et 375 px : déplacement complet, « Mes soignants », page `/demo`, bandeau sur l’accueil.
+
+## Défauts trouvés et corrigés pendant la réalisation
+- Le rendez-vous d’un autre patient répondait « créneau expiré » au lieu de « introuvable » quand la session n’avait pas de créneau tenu : la propriété est maintenant vérifiée en premier.
+- La carte « Mes rendez-vous » annonçait un délai de 24 h en dur, faux pour les motifs qui ont un autre délai.
+
+## Écarts et limites
+- On ne peut pas déplacer vers un créneau qui chevauche le rendez-vous actuel.
+- Le back-office (`apps/admin`, port 3200) n’est pas relié depuis `/demo`.
+
+# Douzième lot : filtres de recherche et carte (19 novembre 2026)
+
+Tickets SEARCH-06 et SEARCH-07 (SPEC-01 §7 et §9).
+
+## Ce qui fonctionne
+- **Filtres** sur `/recherche` : boutons rapides « Aujourd’hui », « Sous 3 / 7 / 14 jours », « Nouveaux patients acceptés », et un panneau « Filtres » (tri par pertinence ou prochaine disponibilité, et par distance avec « Autour de moi » ; langues parlées ; moyens de paiement ; assurance acceptée). Tout est dans l’URL (`?dispo=3&langues=ar`) : partageable, restauré au rechargement, retour en page 1. « Effacer les filtres » remet tout à zéro. Sans résultat avec filtres, le message propose de retirer un filtre.
+- **API** `GET /v1/search/practitioners` : paramètres `dispo`, `langues`, `paiement`, `assurance`, `nouveaux`, `tri` ; réponse avec `facets` (options proposées, calculées avant filtrage pour qu’un choix ne vide pas sa propre liste) et la position de chaque cabinet (`practice.lat`, `practice.lng`, ou celle de la localité). 1 test d’intégration.
+- **Carte** (Leaflet 1.9.4, fonds OpenStreetMap) : points numérotés comme les cartes de la liste ; survoler une carte met son point en évidence, cliquer un point fait défiler jusqu’à la carte. Sur ordinateur, colonne de droite qui reste visible ; sur téléphone, bouton « Afficher la carte » (Leaflet n’est chargé qu’à ce moment). Plusieurs soignants à la même adresse (clinique) ont leurs points côte à côte au lieu d’empilés.
+
+Vérifié dans le navigateur à 1280 px et 375 px : 6 résultats et 6 points, survol, filtre « Arabe » (2 résultats), « Sous 3 jours » ajouté à l’URL et conservé au rechargement, carte mobile à la demande, aucune erreur dans la page. Les fonds de carte n’ont pas pu être chargés dans l’environnement de vérification (accès réseau à OpenStreetMap bloqué) : seuls les points et les contrôles ont été vus.
+
+## Écarts et limites
+- Les filtres et le tri par disponibilité sont calculés en mémoire, praticien par praticien : suffisant pour la démo, à revoir (vue matérialisée DATA-02, cache AVAIL-05) quand il y aura des centaines de soignants.
+- Le filtre « Type (soignant / établissement) » n’est pas fait : la recherche ne renvoie que des soignants.
+- Les tuiles viennent du serveur public d’OpenStreetMap, dont la politique d’usage limite le trafic : en production, prendre un fournisseur de tuiles ou un serveur dédié.

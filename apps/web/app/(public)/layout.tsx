@@ -1,9 +1,11 @@
+import { DemoBanner } from '@/components/DemoBanner';
 import { SiteFooter } from '@/components/SiteFooter';
 import { SiteHeader } from '@/components/SiteHeader';
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col">
+      <DemoBanner />
       <SiteHeader />
       <main id="contenu" className="flex-1">
         {children}

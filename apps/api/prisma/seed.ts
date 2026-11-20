@@ -205,6 +205,33 @@ async function seedDemoAppointments(organizationId: string) {
         .catch(() => undefined); // overlapping slot: skip
     }
   }
+
+  // Dr Amina Saïd's demo day: a morning appointment never closed (« À clôturer » on her home page)
+  // and two online requests waiting for an answer (« Demandes à valider », SPEC-05 §Règles 6).
+  const amina = await prisma.agenda.findFirst({ where: { practitioner: { organizationId, firstName: 'Amina' } }, include: { motives: { orderBy: { sortOrder: 'asc' } } } });
+  const aminaMotive = amina?.motives[0];
+  if (!amina || !aminaMotive) return;
+  const extra = [
+    { dayOffset: 0, minutes: 8 * 60, status: 'CONFIRMED' as const, source: 'PHONE' as const, record: records[3] },
+    { dayOffset: 2, minutes: 11 * 60, status: 'PENDING_VALIDATION' as const, source: 'ONLINE' as const, record: records[4], patientMessage: 'Douleurs au dos depuis une semaine.' },
+    { dayOffset: 3, minutes: 14 * 60 + 30, status: 'PENDING_VALIDATION' as const, source: 'ONLINE' as const, record: records[5] },
+  ];
+  for (const e of extra) {
+    if (!e.record) continue;
+    const date = new Date(`${today}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + e.dayOffset);
+    const startsAt = zonedToUtc(date.toISOString().slice(0, 10), e.minutes, TZ);
+    await prisma.appointment
+      .create({
+        data: {
+          agendaId: amina.id, motiveId: aminaMotive.id, patientRecordId: e.record.id, startsAt,
+          endsAt: new Date(startsAt.getTime() + aminaMotive.durationMinutes * 60_000),
+          status: e.status, source: e.source, patientMessage: e.patientMessage ?? null,
+          events: { create: { type: 'BOOKED', payload: { source: 'seed' } } },
+        },
+      })
+      .catch(() => undefined);
+  }
 }
 
 async function seedDemo() {

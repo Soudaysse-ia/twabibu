@@ -284,6 +284,9 @@ export class ProService {
       if (a.status === 'NO_SHOW') await this.prisma.patientRecord.update({ where: { id: a.patientRecord.id }, data: { noShowCount: { decrement: 1 } } });
     }
 
+    // Accepting an online request (SPEC-05 §Règles 6): the patient is told it is confirmed.
+    const accepted = a.status === 'PENDING_VALIDATION' && data.status === 'CONFIRMED';
+
     let moved = false;
     if (input.startsAt && input.startsAt.getTime() !== a.startsAt.getTime()) {
       const duration = a.endsAt.getTime() - a.startsAt.getTime();
@@ -308,24 +311,27 @@ export class ProService {
       throw error;
     }
     const row = await this.prisma.appointment.findUniqueOrThrow({ where: { id: a.id }, include: proAppointmentInclude });
-    if (moved && input.notifyPatient) await this.messages.send(row.id, 'rescheduled');
+    if (input.notifyPatient && accepted) await this.messages.send(row.id, 'accepted');
+    else if (input.notifyPatient && moved) await this.messages.send(row.id, 'rescheduled');
     return toProView(row);
   }
 
   async cancel(m: MembershipContext, user: SessionUser, id: string, input: { reason?: string; notifyPatient: boolean }) {
     const a = await this.appointmentFor(m, id);
     if (a.status !== 'CONFIRMED' && a.status !== 'PENDING_VALIDATION' && a.status !== 'ARRIVED') throw new ApiException('CONFLICT', 'This appointment cannot be cancelled');
+    // Cancelling a request that was never accepted is a refusal: different event and message.
+    const refused = a.status === 'PENDING_VALIDATION';
     await this.prisma.appointment.update({
       where: { id: a.id },
       data: {
         status: 'CANCELLED_BY_PRACTICE',
         cancelledAt: new Date(),
         cancellationReason: input.reason ?? null,
-        events: { create: { type: 'CANCELLED', actorUserId: user.id, payload: { by: 'PRACTICE', reason: input.reason ?? null } } },
+        events: { create: refused ? { type: 'REFUSED', actorUserId: user.id, payload: { reason: input.reason ?? null } } : { type: 'CANCELLED', actorUserId: user.id, payload: { by: 'PRACTICE', reason: input.reason ?? null } } },
       },
     });
     const row = await this.prisma.appointment.findUniqueOrThrow({ where: { id: a.id }, include: proAppointmentInclude });
-    if (input.notifyPatient && row.startsAt > new Date()) await this.messages.send(row.id, 'cancelledByPractice');
+    if (input.notifyPatient && row.startsAt > new Date()) await this.messages.send(row.id, refused ? 'refused' : 'cancelledByPractice');
     return toProView(row);
   }
 

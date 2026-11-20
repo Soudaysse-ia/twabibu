@@ -1,7 +1,7 @@
 import type { Prisma } from '@prisma/client';
 
 export const appointmentInclude = {
-  motive: { select: { name: true, cancellationDeadlineHours: true, instructions: true, priceKmf: true } },
+  motive: { select: { id: true, name: true, cancellationDeadlineHours: true, instructions: true, priceKmf: true } },
   agenda: {
     select: {
       practitioner: { select: { slug: true, title: true, firstName: true, lastName: true, speciality: { select: { slug: true, name: true } } } },
@@ -24,6 +24,8 @@ export function toPatientView(a: AppointmentRow, now = new Date()) {
   const active = a.status === 'CONFIRMED' || a.status === 'PENDING_VALIDATION';
   return {
     id: a.id,
+    agendaId: a.agendaId,
+    motiveId: a.motive.id,
     status: a.status,
     startsAt: a.startsAt.toISOString(),
     endsAt: a.endsAt.toISOString(),
@@ -35,6 +37,7 @@ export function toPatientView(a: AppointmentRow, now = new Date()) {
     practitioner: {
       name: practitionerName(p),
       speciality: p.speciality.name,
+      slug: p.slug,
       url: `/${p.speciality.slug}/${a.agenda.practice.locality.slug}/${p.slug}`,
     },
     practice: {

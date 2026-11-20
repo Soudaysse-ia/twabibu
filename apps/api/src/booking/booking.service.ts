@@ -17,6 +17,7 @@ export interface BookingInput {
   answers?: Record<string, string>;
   instructionsAccepted: true;
   patientMessage?: string;
+  shareRecord?: boolean;
 }
 
 /** Online booking (SPEC-03): lock the slot, then create the appointment once the patient is signed in. */
@@ -139,8 +140,80 @@ export class BookingService {
     }
     await this.locks.release(input.agendaId, input.startsAt, bookingSessionId);
 
+    // Sharing asked at booking: the account holder's own record only (a relative's record is not shared from here).
+    if (input.shareRecord && !person.relativeId) {
+      const medical =
+        (await this.prisma.medicalRecord.findUnique({ where: { patientProfileId: profileId } })) ??
+        (await this.prisma.medicalRecord.create({ data: { patientProfileId: profileId } }));
+      const existing = await this.prisma.recordConsent.findFirst({ where: { recordId: medical.id, organizationId, revokedAt: null } });
+      if (!existing) await this.prisma.recordConsent.create({ data: { recordId: medical.id, organizationId, grantedVia: 'booking' } });
+    }
+
     await this.messages.send(appointmentId, status === 'CONFIRMED' ? 'booked' : 'pending');
     const appointment = await this.prisma.appointment.findUniqueOrThrow({ where: { id: appointmentId }, include: appointmentInclude });
     return toPatientView(appointment);
+  }
+
+  /**
+   * The patient moves their own appointment (SPEC-03 « Déplacer un rendez-vous », BOOK-08): same practitioner and motive,
+   * a new slot held by this booking session, within the motive's cancellation deadline. The old appointment becomes
+   * CANCELLED_BY_PATIENT, the new one points to it (`rescheduledFromId`), and a single « déplacé » message goes out.
+   */
+  async reschedule(user: SessionUser, appointmentId: string, startsAt: Date, bookingSessionId: string) {
+    const profileId = user.patientProfileId!;
+    const old = await this.prisma.appointment.findFirst({ where: { id: appointmentId, patientProfileId: profileId }, include: appointmentInclude });
+    if (!old) throw new ApiException('NOT_FOUND', 'Appointment not found');
+    const view = toPatientView(old);
+    if (!view.cancellation.allowed) {
+      if (old.status !== 'CONFIRMED' && old.status !== 'PENDING_VALIDATION') throw new ApiException('CONFLICT', 'Appointment cannot be moved');
+      throw new ApiException('CANCELLATION_DEADLINE_PASSED', 'Online deadline passed', { practicePhone: old.agenda.practice.phone });
+    }
+    const owner = await this.locks.owner(old.agendaId, startsAt);
+    if (!owner || owner.sessionId !== bookingSessionId || owner.motiveId !== old.motiveId) throw new ApiException('SLOT_LOCK_EXPIRED', 'Slot is no longer held for you');
+    if (!(await this.availability.isBookable(old.agendaId, old.motiveId, startsAt, { source: 'ONLINE', patientProfileId: profileId, bookingSessionId }))) {
+      throw new ApiException('SLOT_UNAVAILABLE', 'Slot unavailable');
+    }
+    const agenda = await this.prisma.agenda.findUniqueOrThrow({ where: { id: old.agendaId }, select: { requiresValidation: true } });
+    const duration = old.endsAt.getTime() - old.startsAt.getTime();
+    let newId: string;
+    try {
+      newId = await this.prisma.$transaction(async (tx) => {
+        await tx.appointment.update({
+          where: { id: old.id },
+          data: {
+            status: 'CANCELLED_BY_PATIENT',
+            cancelledAt: new Date(),
+            cancellationReason: 'Déplacé en ligne par le patient',
+            events: { create: { type: 'RESCHEDULED', actorUserId: user.id, payload: { by: 'PATIENT', to: startsAt.toISOString() } } },
+          },
+        });
+        const created = await tx.appointment.create({
+          data: {
+            agendaId: old.agendaId,
+            motiveId: old.motiveId,
+            patientRecordId: old.patientRecordId,
+            patientProfileId: profileId,
+            relativeId: old.relativeId,
+            startsAt,
+            endsAt: new Date(startsAt.getTime() + duration),
+            status: agenda.requiresValidation ? 'PENDING_VALIDATION' : 'CONFIRMED',
+            source: 'ONLINE',
+            bookedByUserId: user.id,
+            answers: old.answers ?? Prisma.JsonNull,
+            patientMessage: old.patientMessage,
+            instructionsAcceptedAt: new Date(),
+            rescheduledFromId: old.id,
+            events: { create: { type: 'BOOKED', actorUserId: user.id, payload: { source: 'ONLINE', rescheduledFrom: old.startsAt.toISOString() } } },
+          },
+        });
+        return created.id;
+      });
+    } catch (error) {
+      if (String((error as Error).message).includes('appointment_no_overlap') || String((error as Error).message).includes('23P01')) throw new ApiException('SLOT_UNAVAILABLE', 'Slot just taken');
+      throw error;
+    }
+    await this.locks.release(old.agendaId, startsAt, bookingSessionId);
+    await this.messages.send(newId, 'rescheduled');
+    return toPatientView(await this.prisma.appointment.findUniqueOrThrow({ where: { id: newId }, include: appointmentInclude }));
   }
 }

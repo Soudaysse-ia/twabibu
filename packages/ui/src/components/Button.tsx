@@ -1,7 +1,7 @@
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'react';
 import { cn } from '../cn';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'navy' | 'accent' | 'ghost' | 'onPrimary';
+export type ButtonVariant = 'primary' | 'secondary' | 'navy' | 'accent' | 'ghost' | 'onPrimary' | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 const base =
@@ -15,6 +15,8 @@ const variants: Record<ButtonVariant, string> = {
   accent: 'bg-accent text-ink hover:bg-accent-hover uppercase tracking-wide',
   ghost: 'text-primary hover:bg-primary-soft',
   onPrimary: 'bg-surface text-primary hover:bg-primary-soft font-bold',
+  /** Destructive confirmation (cancel, refuse). */
+  danger: 'bg-danger text-white hover:opacity-90 uppercase tracking-wide',
 };
 
 const sizes: Record<ButtonSize, string> = {

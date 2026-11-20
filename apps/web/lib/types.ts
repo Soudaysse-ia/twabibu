@@ -10,7 +10,7 @@ export interface SearchItem {
   verified: boolean;
   acceptsNewPatients: boolean;
   speciality: { slug: string; name: string };
-  practice: { addressLine: string; locality: string; island: string; distanceKm: number | null } | null;
+  practice: { addressLine: string; locality: string; island: string; distanceKm: number | null; lat: number; lng: number } | null;
   languages: string[];
   priceFromKmf: number | null;
   motiveId: string | null;
@@ -19,11 +19,18 @@ export interface SearchItem {
   nextAvailabilityAt: string | null;
 }
 
+export interface SearchFacets {
+  languages: { code: string; name: string }[];
+  paymentMethods: { code: string; name: string }[];
+  insurances: string[];
+}
+
 export interface SearchResult {
   items: SearchItem[];
   total: number;
   page: number;
   pageSize: number;
+  facets: SearchFacets;
 }
 
 export interface Motive {
@@ -91,6 +98,8 @@ export interface Me {
 
 export interface PatientAppointment {
   id: string;
+  agendaId: string;
+  motiveId: string;
   status: 'PENDING_VALIDATION' | 'CONFIRMED' | 'ARRIVED' | 'IN_CONSULTATION' | 'DONE' | 'NO_SHOW' | 'CANCELLED_BY_PATIENT' | 'CANCELLED_BY_PRACTICE';
   startsAt: string;
   endsAt: string;
@@ -99,7 +108,7 @@ export interface PatientAppointment {
   instructions: string | null;
   forName: string;
   forRelative: boolean;
-  practitioner: { name: string; speciality: string; url: string };
+  practitioner: { name: string; slug: string; speciality: string; url: string };
   practice: { name: string; addressLine: string; locality: string; island: string; phone: string | null; lat: number | null; lng: number | null };
   cancellation: { allowed: boolean; deadline: string };
 }

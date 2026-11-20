@@ -38,6 +38,12 @@ export default async function MyAppointmentsPage() {
           <Link href="/mon-compte/commandes" className="text-sm font-medium text-primary hover:underline">
             Mes commandes
           </Link>
+          <Link href="/mon-compte/soignants" className="text-sm font-medium text-primary hover:underline">
+            Mes soignants
+          </Link>
+          <Link href="/mon-compte/dossier" className="text-sm font-medium text-primary hover:underline">
+            Partage de mon dossier
+          </Link>
           <LogoutButton />
         </div>
       </div>
