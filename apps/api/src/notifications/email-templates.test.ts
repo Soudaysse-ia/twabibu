@@ -24,9 +24,9 @@ describe('e-mail templates', () => {
     assert.equal(plain.subject, 'Rappel : rendez-vous le vendredi 13 novembre 2026 à 10:20');
     assert.ok(plain.html.includes('Voir mon rendez-vous'));
     assert.ok(!plain.html.includes('Je confirme'));
-    const asked = emailTemplates.appointmentReminder({ ...data, confirmUrl: 'https://twabibu.km/rendez-vous/abc/confirmer?t=x', preferencesUrl: 'https://twabibu.km/mon-compte/rendez-vous#rappels' });
+    const asked = emailTemplates.appointmentReminder({ ...data, confirmUrl: 'https://twabibu.km/rendez-vous/abc/confirmer?t=x', preferencesUrl: 'https://twabibu.km/mon-compte/profil#rappels' });
     assert.ok(asked.html.includes('href="https://twabibu.km/rendez-vous/abc/confirmer?t=x"'));
-    assert.ok(asked.text.includes('Ne plus recevoir de rappels : https://twabibu.km/mon-compte/rendez-vous#rappels'));
+    assert.ok(asked.text.includes('Ne plus recevoir de rappels : https://twabibu.km/mon-compte/profil#rappels'));
     assert.ok(!asked.html.includes('<script>'));
   });
 

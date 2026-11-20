@@ -276,3 +276,20 @@ Vérifié dans le navigateur à 1280 px et 375 px : 6 résultats et 6 points, su
 - Les filtres et le tri par disponibilité sont calculés en mémoire, praticien par praticien : suffisant pour la démo, à revoir (vue matérialisée DATA-02, cache AVAIL-05) quand il y aura des centaines de soignants.
 - Le filtre « Type (soignant / établissement) » n’est pas fait : la recherche ne renvoie que des soignants.
 - Les tuiles viennent du serveur public d’OpenStreetMap, dont la politique d’usage limite le trafic : en production, prendre un fournisseur de tuiles ou un serveur dédié.
+
+# Treizième lot : « Mes proches », « Mon profil » et navigation du compte (19 novembre 2026)
+
+Tickets ACCOUNT-02 et ACCOUNT-03 (SPEC-04 §Compte).
+
+## Ce qui fonctionne
+- **Navigation du compte** : une barre d’onglets commune à toutes les pages `/mon-compte/...` (rendez-vous, proches, soignants, ordonnances, commandes, partage du dossier, profil) remplace les liens éparpillés en haut de chaque page. Sur téléphone, elle défile et l’onglet actif est ramené à l’écran.
+- **Mes proches** (`/mon-compte/proches`) : liste avec lien, âge, date de naissance et téléphone ; ajout, modification et retrait. Le retrait est refusé tant qu’un rendez-vous est à venir pour ce proche (message qui renvoie à « Mes rendez-vous ») ; les rendez-vous passés gardent le nom du proche (copié sur la fiche du cabinet). Téléphone facultatif, vérifié avec `packages/utils`.
+- **Mon profil** (`/mon-compte/profil`) : civilité, nom, prénom, date de naissance, adresse, localité (par île), assurance ; l’adresse e-mail est affichée sans être modifiable. Un changement de nom ou de date de naissance affiche un avertissement et est inscrit au journal d’audit (avant / après, rien d’autre). Le réglage des rappels est déplacé ici ; le lien des e-mails de rappel pointe désormais vers `/mon-compte/profil#rappels`.
+- **Appareils connectés** : liste des sessions actives (« Chrome sur Android », date de connexion, « Cet appareil »), « Déconnecter » un appareil ou tous les autres.
+- **API** : `PATCH` et `DELETE /v1/me/relatives/:id`, `GET` et `PUT /v1/me/profile`, `GET /v1/me/sessions`, `DELETE /v1/me/sessions/:id`, `POST /v1/me/sessions/revoke-others`. Un proche ou une session d’un autre compte répond 404.
+
+Tests automatisés : 2 tests d’intégration (proches : modification, téléphone invalide, 404 pour un autre compte, retrait bloqué puis permis après annulation, nom conservé dans l’historique ; profil : journal d’audit seulement si le nom change, localité inconnue refusée, sessions listées, 404 pour un autre compte, appareil déconnecté refusé ensuite). Vérifié dans le navigateur à 1280 px et 375 px : ajout, modification, téléphone invalide, retrait, enregistrement du profil, onglet actif visible, pas de défilement horizontal.
+
+## Écarts et limites
+- Pas encore de changement d’adresse e-mail (il faudra un code envoyé à la nouvelle adresse), ni d’ajout de téléphone au compte, ni de suppression de compte et d’export des données (ACCOUNT-05).
+- Le partage du dossier d’un proche n’est pas encore proposé.

@@ -86,7 +86,7 @@ export class AppointmentMessagesService {
           manageUrl,
           // Reminders only (other templates ignore these fields).
           confirmUrl: options.confirmUrl,
-          preferencesUrl: account ? `${this.config.APP_URL}/mon-compte/rendez-vous#rappels` : undefined,
+          preferencesUrl: account ? `${this.config.APP_URL}/mon-compte/profil#rappels` : undefined,
         }),
         template,
         userId,

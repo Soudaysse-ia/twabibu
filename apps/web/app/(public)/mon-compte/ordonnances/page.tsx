@@ -25,20 +25,7 @@ export default async function MyPrescriptionsPage() {
   const items = res.ok ? res.data : [];
   return (
     <Container className="flex flex-col gap-5 py-8">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <h1 className="text-2xl font-bold">Mes ordonnances</h1>
-        <div className="flex gap-4 text-sm font-medium">
-          <Link href="/mon-compte/rendez-vous" className="text-primary hover:underline">
-            Mes rendez-vous
-          </Link>
-          <Link href="/mon-compte/commandes" className="text-primary hover:underline">
-            Mes commandes
-          </Link>
-          <Link href="/mon-compte/dossier" className="text-primary hover:underline">
-            Partage de mon dossier
-          </Link>
-        </div>
-      </div>
+      <h1 className="text-2xl font-bold">Mes ordonnances</h1>
       {items.length === 0 ? (
         <Card className="text-text">Les ordonnances signées par vos soignants sur Twabibu apparaîtront ici, pour vous et vos proches.</Card>
       ) : (

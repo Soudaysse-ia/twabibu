@@ -39,17 +39,7 @@ export default async function MyCarersPage() {
 
   return (
     <Container className="flex flex-col gap-5 py-8">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <h1 className="text-2xl font-bold">Mes soignants</h1>
-        <div className="flex flex-wrap gap-4 text-sm font-medium">
-          <Link href="/mon-compte/rendez-vous" className="text-primary hover:underline">
-            Mes rendez-vous
-          </Link>
-          <Link href="/mon-compte/dossier" className="text-primary hover:underline">
-            Partage de mon dossier
-          </Link>
-        </div>
-      </div>
+      <h1 className="text-2xl font-bold">Mes soignants</h1>
       {list.length === 0 ? (
         <Card className="flex flex-col items-start gap-3 text-text">
           Les soignants que vous consultez sur Twabibu apparaîtront ici, pour reprendre rendez-vous en un clic.
