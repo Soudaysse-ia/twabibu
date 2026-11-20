@@ -10,10 +10,10 @@ export const DEMO = {
 
 const bulk = (s: string) => `$${Buffer.byteLength(s)}\r\n${s}\r\n`;
 
-/** Minimal Redis call (DEL), so the tests need no Redis client. Local and CI databases only. */
-function redisDel(url: string, keys: string[]): Promise<void> {
+/** Minimal Redis call (one command, reply ignored), so the tests need no Redis client. Local and CI databases only. */
+function redis(url: string, args: string[]): Promise<void> {
   const { hostname, port } = new URL(url);
-  const command = `*${keys.length + 1}\r\n${bulk('DEL')}${keys.map(bulk).join('')}`;
+  const command = `*${args.length}\r\n${args.map(bulk).join('')}`;
   return new Promise((resolve, reject) => {
     const socket = new Socket();
     socket.setTimeout(3000, () => reject(new Error('Redis timeout')));
@@ -28,5 +28,9 @@ function redisDel(url: string, keys: string[]): Promise<void> {
 
 export default async function globalSetup() {
   const keys = Object.values(DEMO).map((email) => `twabibu:otp-rate:${email}`);
-  await redisDel(process.env.REDIS_URL ?? 'redis://localhost:6379', keys);
+  const url = process.env.REDIS_URL ?? 'redis://localhost:6379';
+  await redis(url, ['DEL', ...keys]);
+  // Contact form limits (WEB-02) are per network address, and every journey comes from this machine.
+  const dropContactLimits = "for _, k in ipairs(redis.call('KEYS', ARGV[1])) do redis.call('DEL', k) end";
+  await redis(url, ['EVAL', dropContactLimits, '0', 'twabibu:contact-rate:*']);
 }

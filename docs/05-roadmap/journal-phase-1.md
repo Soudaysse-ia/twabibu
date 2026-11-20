@@ -349,3 +349,20 @@ Vérifié : 95 tests de l’API (dont 5 sur la décision CSRF et 1 de bout en bo
 - La CSP garde `'unsafe-inline'` pour les scripts (amorçage de Next) : elle bloque les scripts externes et l’envoi de données vers un autre domaine, pas un script injecté dans la page ; l’échappement de React reste la protection principale contre l’injection.
 - Prix d’hébergement relevés sur des sources publiques, à confirmer à la commande.
 
+
+# Dix-septième lot : centre d’aide, pages légales et contact (20 novembre 2026)
+
+Ticket WEB-02, nécessaire avant toute ouverture au public. Les pages « À propos », « Centre d’aide », CGU, « Protection des données personnelles » et « Mentions légales » affichaient « Bientôt disponible ».
+
+## Fait
+- **Centre d’aide** (`/aide`, `/aide/[article]`) : 14 articles rangés pour les patients, les soignants et les pharmacies, chacun avec un bouton vers la page concernée, les autres articles de la rubrique et un encart « Vous ne trouvez pas votre réponse ? ». Chaque libellé cité (« Déplacer le rendez-vous », « Partage de mon dossier »…) a été vérifié dans l’interface.
+- **Pages légales** (`/cgu`, `/confidentialite`, `/mentions-legales`) et **« À propos »** : rédigées à partir de ce que fait vraiment le produit (données collectées, qui y accède, durées de `securite-et-donnees-sante.md`, cookies `tw_session` et `tw_bsid`, sous-traitants). Bandeau « Document provisoire » tant que LEGAL-01 n’est pas fait ; l’identité de l’éditeur est marquée « à compléter » à un seul endroit.
+- **Contact** (`/contact`) : nom, e-mail, profil, message (sans donnée médicale, rappelé sous le champ), champ piège contre les robots, erreurs par champ, confirmation annoncée et focalisée. `POST /v1/contact` envoie un e-mail au support (`SUPPORT_EMAIL`) par le journal des notifications ; rien n’est renvoyé à l’expéditeur (le formulaire ne peut pas servir à écrire à un tiers) ; 5 messages par heure et par adresse IP, 3 par adresse e-mail.
+- Textes dans `packages/i18n/src/content/` sous forme de blocs structurés (paragraphe, liste, étapes, encadré), rendus sans HTML : rien ne peut y injecter de balise. Lien « Nous contacter » dans le pied de page.
+
+Vérifié : 100 tests de l’API (dont 5 sur le contact : envoi échappé au support, refus des champs invalides et d’un en-tête glissé dans le nom, robot ignoré, limites), 3 tests de contenu (identifiants uniques, liens internes, pas de sortie du statut provisoire tant qu’il reste « à compléter »), parcours Playwright aide → contact sur ordinateur et téléphone, pages légales depuis le pied de page ; captures à 375 px et 1280 px sans débordement ni erreur de console.
+
+## Écarts et limites
+- Textes juridiques à faire valider (LEGAL-01) : identité de l’éditeur, durée de conservation des notes des soignants, droit applicable.
+- Les articles sont dans le code : leur gestion dans le back-office (SPEC-11 §5) reste à faire avec ADMIN-06.
+- Le message de contact est visible par le support dans le journal des notifications ; l’avertissement sous le champ demande de n’y mettre aucune information médicale, sans pouvoir l’empêcher.

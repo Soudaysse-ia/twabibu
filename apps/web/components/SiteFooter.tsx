@@ -57,6 +57,7 @@ export function SiteFooter() {
             {[
               ['/a-propos', fr.footer.about],
               ['/aide', fr.footer.help],
+              ['/contact', fr.footer.contact],
               ['/pro', fr.footer.pro],
               ['/pharma', fr.footer.pharma],
             ].map(([href, label]) => (

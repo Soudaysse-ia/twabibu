@@ -19,6 +19,8 @@ const EnvSchema = z.object({
   EMAIL_PROVIDER: z.enum(['fake', 'brevo', 'resend']).default('fake'),
   EMAIL_API_KEY: z.string().default(''),
   EMAIL_FROM: z.string().default('Twabibu <rendez-vous@twabibu.km>'),
+  /** Where contact-form messages go (WEB-02). */
+  SUPPORT_EMAIL: z.email().default('support@twabibu.km'),
   /** Pepper for OTP hashes. Long random value in production. */
   SESSION_SECRET: z.string().min(16).default('dev-only-session-secret-change-me'),
   /** Key for medical free text (AES-256-GCM). Any long random string; never change it without re-encrypting. */

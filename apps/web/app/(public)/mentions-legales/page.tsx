@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
-import { fr } from '@twabibu/i18n';
-import { ComingSoon } from '@/components/ComingSoon';
+import { LEGAL_DOCUMENTS } from '@twabibu/i18n';
+import { LegalPage } from '@/components/content/LegalPage';
 
-export const metadata: Metadata = { title: fr.footer.legalNotice, robots: { index: false } };
+const doc = LEGAL_DOCUMENTS['mentions-legales'];
+
+export const metadata: Metadata = { title: doc.title, description: doc.description };
 
 export default function Page() {
-  return <ComingSoon title={fr.footer.legalNotice} />;
+  return <LegalPage doc={doc} />;
 }

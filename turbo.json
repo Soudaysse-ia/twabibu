@@ -19,6 +19,7 @@
         "SMS_PROVIDER",
         "EMAIL_PROVIDER",
         "EMAIL_FROM",
+        "SUPPORT_EMAIL",
         "SESSION_SECRET",
         "ENCRYPTION_KEY"
       ]
