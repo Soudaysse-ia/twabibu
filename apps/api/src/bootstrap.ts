@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
+import { csrfMiddleware, originsFrom } from './common/csrf.js';
 import { AllExceptionsFilter } from './common/http-exception.filter.js';
 import { API_VERSION, loadConfig, type AppConfig } from './config.js';
 
@@ -14,6 +15,7 @@ export async function createApp(config: AppConfig = loadConfig()): Promise<INest
   // X-Forwarded-For and the site passes it on. Trust that header from private addresses only, so req.ip (audit log,
   // sessions) is the visitor and not the site's container. Never publish the API port directly.
   app.set('trust proxy', 'loopback, linklocal, uniquelocal');
+  app.use(csrfMiddleware(originsFrom([config.APP_URL, config.ADMIN_URL])));
   app.useGlobalFilters(new AllExceptionsFilter());
   app.enableCors({ origin: [config.APP_URL], credentials: true });
   app.enableShutdownHooks();

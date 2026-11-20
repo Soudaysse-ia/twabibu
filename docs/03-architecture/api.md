@@ -1,6 +1,6 @@
 # API REST `/v1` (NestJS)
 
-Conventions : JSON, `camelCase`, dates ISO 8601 UTC, pagination par curseur (`?cursor=&limit=`) ou page pour le SEO, erreurs `{ code, message, details? }` avec codes de `packages/contracts/errors.ts`. OpenAPI généré automatiquement sur `/v1/docs`. Toutes les routes sont versionnées. Authentification : `Authorization: Bearer <accessToken>` (mobile) ou cookie `tw_session` httpOnly (web, avec protection CSRF double-submit).
+Conventions : JSON, `camelCase`, dates ISO 8601 UTC, pagination par curseur (`?cursor=&limit=`) ou page pour le SEO, erreurs `{ code, message, details? }` avec codes de `packages/contracts/errors.ts`. OpenAPI généré automatiquement sur `/v1/docs`. Toutes les routes sont versionnées. Authentification : `Authorization: Bearer <accessToken>` (mobile) ou cookie `tw_session` httpOnly (web, `SameSite=Lax`) ; toute écriture (POST, PUT, PATCH, DELETE) dont l’en-tête `Origin` n’est ni le site ni le back-office, ou marquée `Sec-Fetch-Site: cross-site`, est refusée en 403 `FORBIDDEN` (ADR-021).
 
 Rôles (garde `@Roles()`): `public`, `patient`, `pro:practitioner`, `pro:secretary`, `pro:admin`, `platform:admin`. Les routes Pro sont scoppées par `organizationId` (en-tête `X-Organization-Id` ou dans l'URL) et vérifiées par `MembershipGuard`.
 

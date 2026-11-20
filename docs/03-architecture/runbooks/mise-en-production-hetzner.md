@@ -13,13 +13,15 @@ Console Hetzner Cloud > *Add server* :
 |---|---|---|
 | Emplacement | Falkenstein ou Nuremberg (Union européenne) | idem |
 | Image | Ubuntu 24.04 | Ubuntu 24.04 |
-| Type | 2 vCPU, 4 Go (gamme CX ou CPX) | 4 vCPU, 8 Go, ≥ 160 Go de disque |
+| Type | CX23 (2 vCPU, 4 Go, 40 Go) | CX33 (4 vCPU, 8 Go, 80 Go) — jamais CPX, quatre fois plus cher depuis juin 2026 |
 | Réseau | IPv4 + IPv6 | IPv4 + IPv6 |
 | Clé SSH | la vôtre (jamais de mot de passe) | idem |
 | Sauvegardes Hetzner | facultatif | **activées** (instantanés quotidiens, en plus de nos sauvegardes) |
 | Pare-feu Hetzner | entrées 22, 80, 443 seulement | idem |
 
-Le prix exact est affiché par Hetzner à la création ; l’ordre de grandeur prévu est de 30 à 60 € par mois pour la production (voir `infrastructure-et-deploiement.md`).
+Le prix exact est affiché par Hetzner à la création ; ordre de grandeur au 20/11/2026 : environ 6 € HT par mois pour la pré-production, environ 15 € HT pour la production avec instantanés et Storage Box (voir `infrastructure-et-deploiement.md` §8). Créez la production seulement au lancement.
+
+**Si Hetzner affiche « indisponible »** pour CX23 ou CX33 (cela arrive depuis juin 2026) : essayez un autre emplacement (Helsinki), sinon prenez chez OVHcloud un VPS-1 (pré-production) ou un VPS-2 (production), Ubuntu 24.04, centre de données en France. Toute la suite de cette procédure est identique ; le pare-feu se règle dans l’espace client OVHcloud (« Edge Network Firewall ») et la sauvegarde hors serveur peut rester une Storage Box Hetzner.
 
 ## 2. Préparer le système
 Depuis votre poste :

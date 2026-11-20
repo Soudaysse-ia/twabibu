@@ -332,3 +332,20 @@ Vérifié : 5 tests verts en environ 15 s, deux passages de suite sur la même b
 ## Écarts et limites
 - Restent à écrire : P4 (journée du secrétariat dans l’agenda), P5 (absence et rendez-vous touchés), P8 (ordonnance envoyée à une pharmacie, réponse et délivrance).
 - Les parcours ne vérifient pas encore les e-mails envoyés (lisibles par `GET /v1/dev/messages`).
+
+# Seizième lot : sécurité web et coût de l’hébergement (20 novembre 2026)
+
+Ticket SEC-03, puis revue du choix d’hébergement avant la mise en ligne.
+
+## Fait
+- **CSRF** (`apps/api/src/common/csrf.ts`, ADR-021) : l’API refuse en 403 toute écriture envoyée par un autre site (en-tête `Origin` différent du site et du back-office, ou `Sec-Fetch-Site: cross-site` / `same-site`). Nouvelle variable `ADMIN_URL` (`.env.example`, `infra/env/*.env.example`).
+- **CSP** sur le site et le back-office (`next.config.ts`), en plus des en-têtes existants (`nosniff`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`) et de HSTS posé par Caddy.
+- **Dépendances** : `pnpm audit --prod --audit-level high` en CI ; `effect` et `deepmerge-ts` (dépendances indirectes du CLI Prisma) forcées en version corrigée.
+- **Hébergement** (`infrastructure-et-deploiement.md` §8, procédure Hetzner) : architecture inchangée, budget revu à la baisse (≈ 4 à 6 €/mois pour la démo seule, ≈ 15 à 20 €/mois avec la production), CX plutôt que CPX après les hausses Hetzner de 2026, OVHcloud VPS-1 / VPS-2 en repli si Hetzner n’a pas de serveur disponible.
+
+Vérifié : 95 tests de l’API (dont 5 sur la décision CSRF et 1 de bout en bout), parcours Playwright P1, P2, P3 + P6, P7 sur ordinateur et téléphone avec la CSP active, aucune violation de CSP sur l’accueil, la recherche avec carte, un profil, la réservation, les pharmacies, l’espace Pro, la documentation de l’API et la connexion au back-office ; écriture refusée à travers le proxy du site avec une origine étrangère.
+
+## Écarts et limites
+- La CSP garde `'unsafe-inline'` pour les scripts (amorçage de Next) : elle bloque les scripts externes et l’envoi de données vers un autre domaine, pas un script injecté dans la page ; l’échappement de React reste la protection principale contre l’injection.
+- Prix d’hébergement relevés sur des sources publiques, à confirmer à la commande.
+
