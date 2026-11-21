@@ -187,6 +187,22 @@ export const emailTemplates = {
     };
   },
 
+  /** Team invitation (SPEC-07, PRO-05). The link carries a one-time token, never anything about patients. */
+  teamInvitation: (d: { organizationName: string; roleLabel: string; url: string; days: number }): RenderedEmail => ({
+    subject: `Invitation à rejoindre ${d.organizationName} sur Twabibu Pro`,
+    text: `Bonjour,\n\nVous êtes invité à rejoindre l’équipe de ${d.organizationName} sur Twabibu Pro, en tant que ${d.roleLabel}.\n\nPour accepter, ouvrez ce lien (valable ${d.days} jours) et connectez-vous avec cette adresse e-mail :\n${d.url}\n\nVous ne connaissez pas ce cabinet ? Ignorez ce message.\n\nTwabibu, à vos côtés dans chaque temps de soin.`,
+    html: layout(
+      'Vous êtes invité sur Twabibu Pro',
+      [
+        'Bonjour,',
+        `Vous êtes invité à rejoindre l’équipe de <strong style="color:#0B2A5B">${esc(d.organizationName)}</strong> sur Twabibu Pro, en tant que ${esc(d.roleLabel)}.`,
+        `Pour accepter, ouvrez le lien ci-dessous (valable ${d.days} jours) et connectez-vous avec cette adresse e-mail.`,
+        'Vous ne connaissez pas ce cabinet ? Ignorez ce message.',
+      ],
+      { label: 'Rejoindre l’équipe', url: d.url },
+    ),
+  }),
+
   /** Contact form (WEB-02), sent to the support address only. The sender's text is escaped and never shown as HTML. */
   contactMessage: (d: { name: string; email: string; topicLabel: string; message: string; receivedAt: Date }): RenderedEmail => ({
     subject: `Contact (${d.topicLabel}) : ${d.name}`,

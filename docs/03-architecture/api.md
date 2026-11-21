@@ -87,7 +87,9 @@ Rôles (garde `@Roles()`): `public`, `patient`, `pro:practitioner`, `pro:secreta
 | GET/POST | `/patients/{id}/documents`, `/appointments/{id}/documents` | envoi au patient |
 | GET | `/waitlist` | liste d'attente |
 | GET | `/stats?from=&to=` | KPI |
-| GET/POST/PATCH/DELETE | `/members`, POST `/members/invite` | équipe et rôles |
+| GET, PATCH, DELETE | `/members`, `/members/{id}` | équipe (titulaire et administrateurs) : liste avec invitations en attente et agendas ; PATCH = droits d’une secrétaire `{ agendaIds?, manageSettings? }` ; DELETE retire le membre et ferme toutes ses sessions (jamais le titulaire ni soi-même) |
+| POST | `/members/invite` | `{ email, role: SECRETARY \| ADMIN, agendaIds?, manageSettings? }` → e-mail avec un lien de 7 jours ; seul le titulaire invite un administrateur |
+| DELETE | `/invitations/{id}` | annule une invitation en attente |
 | GET | `/audit?from=&to=` | journal |
 | GET/PATCH | `/notification-settings` | rappels |
 | GET | `/subscription`, `/invoices` | |
@@ -104,6 +106,12 @@ Rôles (garde `@Roles()`): `public`, `patient`, `pro:practitioner`, `pro:secreta
 | POST | `/record/consent-requests` | demande d'accès (SMS/app) ; `POST /record/emergency-access` avec justification |
 | GET | `/record/export` | PDF/JSON |
 | Patient | `GET /v1/me/record`, `GET/POST/DELETE /v1/me/record/consents`, `GET /v1/me/record/access-log`, `POST /v1/me/record/self-declared` | carnet |
+
+## Invitations (`/v1/pro/invitations`) — lien reçu par e-mail, 30 req / min / IP
+| Méthode | Route | Description |
+|---|---|---|
+| GET | `/{token}` | cabinet, rôle, adresse invitée, état (`PENDING`, `EXPIRED`, `ACCEPTED`, `REVOKED`) |
+| POST | `/{token}/accept` | `{ signupToken? }` : connecté avec l’adresse invitée, ou jeton d’inscription du code e-mail (crée le compte professionnel et ouvre la session) ; erreurs `INVITATION_INVALID` (404), `INVITATION_EXPIRED` (410), `INVITATION_EMAIL_MISMATCH` (403) |
 
 ## Ordonnances (`/v1/pro/orgs/{orgId}/prescriptions`)
 | Méthode | Route | Description |

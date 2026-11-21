@@ -486,6 +486,7 @@ model Organization {
   pharmacyProfile      PharmacyProfile?
   notificationSettings OrganizationNotificationSettings?
   subscriptions        Subscription[]
+  invitations          Invitation[]
 }
 
 model Membership {
@@ -505,6 +506,27 @@ model Membership {
 
   @@unique([userId, organizationId])
   @@index([organizationId])
+}
+
+/// Invitation à rejoindre l'équipe d'un cabinet (SPEC-07, PRO-05). Lien de 7 jours ; seul le hachage du jeton est gardé.
+model Invitation {
+  id             String         @id @default(uuid(7)) @db.Uuid
+  organizationId String         @db.Uuid
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// Adresse invitée, en minuscules : seul ce compte peut accepter.
+  email          String
+  role           MembershipRole
+  /// Permissions données à l'arrivée (agendas autorisés d'une secrétaire, etc.)
+  permissions    Json           @default("{}")
+  tokenHash      String         @unique
+  invitedById    String?        @db.Uuid
+  expiresAt      DateTime       @db.Timestamptz(3)
+  acceptedAt     DateTime?      @db.Timestamptz(3)
+  revokedAt      DateTime?      @db.Timestamptz(3)
+  createdAt      DateTime       @default(now()) @db.Timestamptz(3)
+
+  @@index([organizationId])
+  @@index([email])
 }
 
 model Practitioner {

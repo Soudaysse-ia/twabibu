@@ -35,6 +35,8 @@ Statuts : `UNVERIFIED` (pièces manquantes) → `PENDING` (dossier déposé) →
 - Liste des membres (nom, rôle, agendas, dernier accès), « Inviter » (e-mail ou téléphone, rôle, agendas autorisés) → lien d'invitation 7 jours ; l'invité crée son mot de passe ; retirer un membre révoque ses sessions.
 - Journal d'activité (V1) : filtre par membre, type, date.
 
+> **Réalisé le 21/11/2026 (PRO-05)** : page `/pro/app/reglages/equipe`. Identité par e-mail et code (ADR-016), donc invitation par e-mail seulement et pas de mot de passe : l’invité confirme l’adresse invitée avec un code, son compte professionnel est créé à ce moment. On invite une secrétaire (agendas autorisés, droit aux réglages) ou, titulaire seulement, un administrateur ; un praticien rejoint par sa propre inscription, son autorisation d’exercer devant être vérifiée. Règles : personne ne se retire soi-même ni ne retire le titulaire ; un administrateur ne retire pas un autre administrateur ; retirer ferme toutes les sessions du membre ; une nouvelle invitation à la même adresse annule la précédente.
+
 ## Paramètres du cabinet
 Nom, type, logo, description, téléphone, e-mail, site, lieux (CRUD), notification (SPEC-08), abonnement (SPEC-11), suppression (demande au support).
 
@@ -42,7 +44,7 @@ Nom, type, logo, description, téléphone, e-mail, site, lieux (CRUD), notificat
 - [ ] Inscription + onboarding complets en environnement de test en < 15 min par un utilisateur non formé (test utilisateur).
 - [ ] Un praticien `PENDING` n'apparaît pas dans la recherche ; après validation admin il apparaît en < 1 min.
 - [ ] Matrice de permissions couverte par des tests automatisés (chaque cellule).
-- [ ] Une invitation expirée ne permet pas de créer un compte.
+- [x] Une invitation expirée ne permet pas de créer un compte (test `apps/api/src/team.test.ts`).
 
 ## Tickets
 PRO-01 inscription soignant + création des entités · PRO-02 onboarding 6 étapes · PRO-03 dépôt de pièces + statuts de vérification · PRO-04 rôles/permissions (service + guards + tests) · PRO-05 équipe et invitations · PRO-06 paramètres cabinet et lieux (carte, marqueur) · PRO-07 profil public édition (photos, expertises, tarifs) · PRO-08 journal d'activité · PRO-09 tests.

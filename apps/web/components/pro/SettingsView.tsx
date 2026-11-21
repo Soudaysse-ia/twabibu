@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { CalendarOff, Plus, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { CalendarOff, Plus, Trash2, Users } from 'lucide-react';
+import { fr } from '@twabibu/i18n';
 import { Badge, Button, Card, cn } from '@twabibu/ui';
 import { formatDateLong, formatKmf, formatTime, toDateKey, zonedToUtc } from '@twabibu/utils';
 import { api, ApiError, errorMessage } from '@/lib/api-client';
@@ -159,6 +161,12 @@ export function SettingsView() {
         <div>
           <h1 className="text-xl font-bold">Réglages de l’agenda</h1>
           <p className="text-sm text-text-muted">Ces réglages s’appliquent immédiatement aux réservations en ligne.</p>
+          {membership.role === 'OWNER' || membership.role === 'ADMIN' ? (
+            <Link href="/pro/app/reglages/equipe" className="mt-1 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-primary hover:underline">
+              <Users aria-hidden="true" size={16} />
+              {fr.team.settingsLink}
+            </Link>
+          ) : null}
         </div>
         {agendas.length > 1 ? (
           <label className="flex flex-col gap-1 text-xs font-medium text-ink">

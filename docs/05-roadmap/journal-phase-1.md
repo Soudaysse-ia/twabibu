@@ -398,3 +398,18 @@ Vérifié dans ce conteneur avec Docker : images construites à partir du code d
 ## Écarts et limites
 - Non vérifiable ici : `server-setup.sh` sur un vrai serveur et le certificat Let’s Encrypt pour `sslip.io` (service tiers, convient à une démo, pas à la production).
 - Le déploiement automatique depuis GitHub reste à brancher (secrets et `DEPLOY_ENABLED`).
+
+# Vingtième lot : équipe du cabinet et invitations (21 novembre 2026)
+
+Ticket PRO-05. Le centre d’aide annonçait l’invitation en ligne « bientôt » ; jusque-là, ajouter une secrétaire passait par le support.
+
+## Fait
+- **Modèle** `Invitation` (migration `20261121090000_team_invitations`, sans écart avec le schéma) : adresse, rôle, permissions de départ, hachage du jeton, expiration à 7 jours, acceptation ou annulation.
+- **API** (`apps/api/src/pro/team.*`) : liste de l’équipe et des invitations, invitation par e-mail (secrétaire avec agendas autorisés et droit aux réglages ; administrateur par le titulaire seulement), annulation, modification des droits d’une secrétaire, retrait d’un membre qui ferme toutes ses sessions ; page publique du lien et acceptation, avec un compte existant ou en créant le compte professionnel après le code e-mail, dans la même transaction que l’adhésion. Règles pures dans `team-rules.ts`. Trois codes d’erreur : `INVITATION_INVALID`, `INVITATION_EXPIRED`, `INVITATION_EMAIL_MISMATCH`. Lien limité à 30 requêtes par minute et par adresse.
+- **Site** : page « Équipe » (lien « Gérer l’équipe » dans les réglages, titulaire et administrateurs), page du lien `/pro/invitation/[jeton]` (cabinet, rôle, adresse invitée, code e-mail, arrivée dans Twabibu Pro). Agendas nommés avec le praticien (« Dr Amina Saïd · Consultations »). Article d’aide « Ce que voit chaque membre de l’équipe » mis à jour.
+
+Vérifié : 113 tests de l’API, dont 4 règles et 5 tests d’intégration (droits, accès refusé depuis un autre cabinet, agenda hors cabinet refusé, lien à usage unique, invitation expirée sans création de compte, annulation, compte existant, retrait qui coupe la session) ; 9 parcours Playwright, dont le nouveau « invitation d’une secrétaire, arrivée depuis le lien, retrait » ; captures à 375 px et 1280 px.
+
+## Écarts et limites
+- Un compte membre de plusieurs cabinets n’en voit qu’un dans Twabibu Pro (le premier) : choix du cabinet à ajouter.
+- Pas encore de journal d’activité de l’équipe à l’écran (PRO-08) ; les actions sont dans le journal d’audit.

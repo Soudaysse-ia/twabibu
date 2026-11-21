@@ -35,6 +35,10 @@ export const ERROR_CODES = [
   'PRODUCT_UNAVAILABLE',
   'DELIVERY_NOT_AVAILABLE',
   'ORDER_STATUS_INVALID',
+  // team
+  'INVITATION_INVALID',
+  'INVITATION_EXPIRED',
+  'INVITATION_EMAIL_MISMATCH',
 ] as const;
 
 export const ErrorCode = z.enum(ERROR_CODES);
