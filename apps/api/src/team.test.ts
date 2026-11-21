@@ -22,6 +22,7 @@ describe('Practice team and invitations', () => {
   const otherOwner = `autre.cabinet.${stamp}@exemple.km`;
   const emails = [newcomer, otherOwner, `expiree.${stamp}@exemple.km`, `annulee.${stamp}@exemple.km`];
   let otherOrgId: string;
+  let foreignAgendaId: string;
 
   async function clearLimits(email: string) {
     const redis = app.get(RedisService).client;
@@ -70,6 +71,31 @@ describe('Practice team and invitations', () => {
     await prisma.membership.create({
       data: { userId: user.id, organizationId: org.id, role: 'OWNER', acceptedAt: new Date() },
     });
+    // Its own practitioner and agenda: a fresh database (CI) has no other practice to borrow one from.
+    const speciality = await prisma.speciality.findFirstOrThrow();
+    const locality = await prisma.locality.findFirstOrThrow();
+    const practitioner = await prisma.practitioner.create({
+      data: {
+        organizationId: org.id,
+        slug: `autre-praticien-${stamp}`,
+        firstName: 'Autre',
+        lastName: 'Praticien',
+        specialityId: speciality.id,
+      },
+    });
+    const practice = await prisma.practice.create({
+      data: {
+        organizationId: org.id,
+        name: 'Autre lieu',
+        addressLine: 'Route de test',
+        localityId: locality.id,
+      },
+    });
+    foreignAgendaId = (
+      await prisma.agenda.create({
+        data: { practitionerId: practitioner.id, practiceId: practice.id, name: 'Consultations' },
+      })
+    ).id;
   });
 
   after(async () => {
@@ -78,6 +104,9 @@ describe('Practice team and invitations', () => {
       await prisma.membership.deleteMany({ where: { user: { email: { in: emails } } } });
       await prisma.session.deleteMany({ where: { user: { email: { in: emails } } } });
       await prisma.notification.deleteMany({ where: { recipient: { in: emails } } });
+      await prisma.agenda.deleteMany({ where: { practitioner: { organizationId: otherOrgId } } });
+      await prisma.practice.deleteMany({ where: { organizationId: otherOrgId } });
+      await prisma.practitioner.deleteMany({ where: { organizationId: otherOrgId } });
       await prisma.organization.deleteMany({ where: { id: otherOrgId } });
       await prisma.user.deleteMany({ where: { email: { in: emails } } });
     }
@@ -108,12 +137,9 @@ describe('Practice team and invitations', () => {
     const agendaId = agendas[0].id;
 
     // Wrong inputs: an agenda of another practice, an address already in the team.
-    const foreignAgenda = await prisma.agenda.findFirstOrThrow({
-      where: { practitioner: { organizationId: { not: orgId } } },
-    });
     await owner
       .post(`/v1/pro/orgs/${orgId}/members/invite`)
-      .send({ email: newcomer, role: 'SECRETARY', agendaIds: [foreignAgenda.id] })
+      .send({ email: newcomer, role: 'SECRETARY', agendaIds: [foreignAgendaId] })
       .expect(400);
     assert.equal(
       (
