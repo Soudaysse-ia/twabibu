@@ -313,11 +313,19 @@ export const HELP_ARTICLES: HelpArticle[] = [
         ],
       },
       {
+        kind: 'steps',
+        items: [
+          'Titulaire ou administrateur : ouvrez « Réglages » puis « Gérer l’équipe ».',
+          'Saisissez l’adresse e-mail de la personne, choisissez son rôle et, pour une secrétaire, les agendas qu’elle gère.',
+          'Elle reçoit un lien valable 7 jours et confirme son adresse avec un code : son accès est ouvert.',
+        ],
+      },
+      {
         kind: 'p',
-        text: 'Pour ajouter un membre à votre équipe, écrivez-nous depuis le formulaire de contact : l’invitation en ligne arrive bientôt.',
+        text: 'Un départ ? « Retirer » ferme aussitôt ses sessions sur tous ses appareils ; les rendez-vous et les dossiers restent au cabinet. Un nouveau praticien inscrit lui-même son activité, car son autorisation d’exercer doit être vérifiée.',
       },
     ],
-    action: { label: 'Nous contacter', href: '/contact' },
+    action: { label: 'Ouvrir Twabibu Pro', href: '/pro/connexion' },
   },
   {
     slug: 'rejoindre-twabibu-pharma',

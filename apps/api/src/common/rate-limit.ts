@@ -22,6 +22,8 @@ export const RATE_LIMITS = {
   publicRead: 120,
   /** Public check of a prescription code (QR): codes cannot be guessed, and this keeps it that way. */
   prescriptionCheck: 30,
+  /** Team invitation link (view and accept). */
+  invitation: 30,
 } as const;
 
 export type RateLimitName = keyof typeof RATE_LIMITS;

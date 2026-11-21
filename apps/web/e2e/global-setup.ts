@@ -4,6 +4,7 @@ import { Socket } from 'node:net';
 export const DEMO = {
   doctor: 'amina.said@demo.twabibu.km',
   secretary: 'secretariat@demo.twabibu.km',
+  owner: 'direction@demo.twabibu.km',
   pharmacist: 'titulaire.port@demo.twabibu.km',
   admin: 'admin@demo.twabibu.km',
 };
