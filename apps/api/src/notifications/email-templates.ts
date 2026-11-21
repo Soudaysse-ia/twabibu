@@ -186,6 +186,17 @@ export const emailTemplates = {
       html: layout(copy[0]!, paragraphs, { label: 'Ouvrir mon espace', url: d.url }),
     };
   },
+
+  /** Contact form (WEB-02), sent to the support address only. The sender's text is escaped and never shown as HTML. */
+  contactMessage: (d: { name: string; email: string; topicLabel: string; message: string; receivedAt: Date }): RenderedEmail => ({
+    subject: `Contact (${d.topicLabel}) : ${d.name}`,
+    text: `Nouveau message reçu par le formulaire de contact.\n\nDe : ${d.name} <${d.email}>\nProfil : ${d.topicLabel}\nReçu : ${when(d.receivedAt)}\n\n${d.message}\n\nRépondez directement à ${d.email}.`,
+    html: layout('Nouveau message de contact', [
+      `<strong style="color:#0B2A5B">De :</strong> ${esc(d.name)} &lt;${esc(d.email)}&gt;<br><strong style="color:#0B2A5B">Profil :</strong> ${esc(d.topicLabel)}<br><strong style="color:#0B2A5B">Reçu :</strong> ${esc(when(d.receivedAt))}`,
+      esc(d.message).replace(/\r?\n/g, '<br>'),
+      `Répondez directement à ${esc(d.email)}.`,
+    ]),
+  }),
 } as const;
 
 export interface OrderEmailData {

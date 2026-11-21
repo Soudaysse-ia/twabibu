@@ -4,4 +4,5 @@ export * from './common.js';
 export * from './directory.js';
 export * from './availability.js';
 export * from './auth.js';
+export * from './contact.js';
 export * from './reference/index.js';

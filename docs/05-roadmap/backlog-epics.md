@@ -44,7 +44,7 @@ Statut : ☐ à faire · ◐ en cours · ☑ fait. Mettre à jour ce fichier à 
 | ID | Titre | Dépend de | Taille |
 |---|---|---|---|
 | ☑ WEB-01 | Next.js : layouts, i18n, polices, PWA, pages institutionnelles, accueil | UI-01 | M |
-| ☐ WEB-02 | Centre d'aide (markdown), pages légales, formulaire de contact | WEB-01 | S |
+| ☑ WEB-02 | Centre d'aide, pages légales, formulaire de contact — 14 articles (patients, soignants, pharmacies), CGU, confidentialité, mentions légales et « À propos » rédigées en version provisoire (validation juridique : LEGAL-01, identité de l’éditeur « à compléter » dans `packages/i18n/src/content/legal.ts`), `/contact` → `POST /v1/contact` vers `SUPPORT_EMAIL` ; textes structurés dans `packages/i18n` en attendant leur gestion dans le back-office (ADMIN-06), 20/11/2026 | WEB-01 | S |
 | ◐ WEB-03 | Page marketing « Vous êtes soignant ? » + tarifs + demande de démo — page `/pro` faite (avantages, étapes, offres, questions, inscription) ; tarifs non affichés tant qu’ils ne sont pas validés ; pas de formulaire de demande de démo | WEB-01 | M |
 
 ## EPIC AVAIL — moteur (SPEC-12)

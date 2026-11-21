@@ -144,6 +144,11 @@ Rôles (garde `@Roles()`): `public`, `patient`, `pro:practitioner`, `pro:secreta
 | GET | `/stats` | plateforme |
 | GET/PATCH | `/feature-flags` | |
 
+## Contact (`/v1/contact`)
+| Méthode | Route | Description |
+|---|---|---|
+| POST | `/contact` | `{ name, email, topic (PATIENT, PRACTITIONER, PHARMACY, OTHER), message, website? }` → 202 ; e-mail au support (`SUPPORT_EMAIL`) par le journal des notifications ; `website` est un champ piège (rempli = ignoré sans erreur) |
+
 ## Webhooks et divers
 - `POST /v1/webhooks/sms/{provider}` : accusés de réception, réponses « OUI » (confirmation) et « STOP ».
 - `POST /v1/webhooks/whatsapp` (V2).
@@ -153,4 +158,5 @@ Rôles (garde `@Roles()`): `public`, `patient`, `pro:practitioner`, `pro:secreta
 - OTP : 3 demandes / 15 min / numéro, 10 / h / IP.
 - Recherche publique : 60 req / min / IP.
 - Verrous de créneau : 10 / min / session.
+- Formulaire de contact : 5 messages / h / IP et 3 / h / adresse e-mail (`apps/api/src/contact/contact-rules.ts`).
 - Login : 5 échecs → délai progressif, 20 → blocage 1 h.

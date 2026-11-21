@@ -5,6 +5,7 @@ import { AdminModule } from './admin/admin.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { AvailabilityModule } from './availability/availability.module.js';
 import { BookingModule } from './booking/booking.module.js';
+import { ContactModule } from './contact/contact.module.js';
 import { DirectoryModule } from './directory/directory.module.js';
 import { HealthModule } from './health/health.module.js';
 import { MedicalModule } from './medical/medical.module.js';
@@ -43,6 +44,7 @@ export class AppModule {
         AvailabilityModule,
         AuthModule,
         HealthModule,
+        ContactModule,
         DirectoryModule,
         SearchModule,
         PractitionersModule,
