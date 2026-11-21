@@ -139,6 +139,9 @@ export const fr = {
       message: 'Votre message doit faire entre 10 et 3 000 caractères.',
     } as Record<string, string>,
   },
+  proShell: {
+    practice: 'Cabinet',
+  },
   team: {
     title: 'Équipe',
     intro: 'Les personnes qui ont accès à l’espace Pro de votre cabinet, et ce qu’elles peuvent faire.',

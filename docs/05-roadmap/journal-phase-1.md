@@ -411,5 +411,15 @@ Ticket PRO-05. Le centre d’aide annonçait l’invitation en ligne « bientôt
 Vérifié : 113 tests de l’API, dont 4 règles et 5 tests d’intégration (droits, accès refusé depuis un autre cabinet, agenda hors cabinet refusé, lien à usage unique, invitation expirée sans création de compte, annulation, compte existant, retrait qui coupe la session) ; 9 parcours Playwright, dont le nouveau « invitation d’une secrétaire, arrivée depuis le lien, retrait » ; captures à 375 px et 1280 px.
 
 ## Écarts et limites
-- Un compte membre de plusieurs cabinets n’en voit qu’un dans Twabibu Pro (le premier) : choix du cabinet à ajouter.
+- ~~Un compte membre de plusieurs cabinets n’en voit qu’un dans Twabibu Pro~~ : corrigé dans le lot suivant.
 - Pas encore de journal d’activité de l’équipe à l’écran (PRO-08) ; les actions sont dans le journal d’audit.
+
+# Vingt et unième lot : choix du cabinet dans Twabibu Pro (21 novembre 2026)
+
+Suite de PRO-05 : un compte peut maintenant appartenir à plusieurs cabinets (titulaire du sien, invité comme administrateur dans un autre). L’espace Pro n’affichait que le premier.
+
+## Fait
+- **Sélecteur « Cabinet »** dans l’en-tête de Twabibu Pro, seulement pour les comptes membres de plusieurs cabinets. Le choix est gardé dans le cookie `tw_pro_org` (`apps/web/lib/pro-practice.ts`), qui ne donne aucun droit : l’API vérifie l’appartenance sur chaque route `/v1/pro/orgs/:orgId`. Cabinet quitté ou cookie absent : le premier cabinet.
+- Après une invitation acceptée, l’espace Pro s’ouvre sur le cabinet rejoint ; la page imprimable d’une ordonnance suit le même choix.
+
+Vérifié : 2 tests unitaires du choix, nouveau parcours Playwright (un soignant inscrit avec son cabinet rejoint celui de la démo comme administrateur, arrive dans le cabinet rejoint, revient au sien, le choix tient d’une page à l’autre), 10 parcours au total ; capture à 375 px et 1280 px sans débordement.

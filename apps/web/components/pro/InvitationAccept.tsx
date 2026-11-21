@@ -5,6 +5,7 @@ import { fr } from '@twabibu/i18n';
 import { Button, cn } from '@twabibu/ui';
 import { api, errorMessage } from '@/lib/api-client';
 import { isDemo } from '@/lib/demo';
+import { rememberPractice } from '@/lib/pro-practice';
 
 const t = fr.invitation;
 const input =
@@ -53,10 +54,15 @@ export function InvitationAccept({
   }
 
   async function join(signupToken?: string) {
-    await api(`/v1/pro/invitations/${encodeURIComponent(token)}/accept`, {
-      method: 'POST',
-      body: signupToken ? { signupToken } : {},
-    });
+    const joined = await api<{ organizationId: string }>(
+      `/v1/pro/invitations/${encodeURIComponent(token)}/accept`,
+      {
+        method: 'POST',
+        body: signupToken ? { signupToken } : {},
+      },
+    );
+    // Open the practice just joined, even when the account already belonged to another one.
+    rememberPractice(joined.organizationId);
     // Full load: the Pro layout reads the new membership on the server.
     window.location.assign('/pro/app');
   }
