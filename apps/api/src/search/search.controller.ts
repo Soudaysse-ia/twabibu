@@ -1,6 +1,7 @@
-import { Controller, Get, Header, Query } from '@nestjs/common';
+import { Controller, Get, Header, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
+import { RateLimit, RateLimitGuard } from '../common/rate-limit.js';
 import { ZodValidationPipe } from '../common/zod-validation.pipe.js';
 import { SearchService } from './search.service.js';
 
@@ -8,6 +9,8 @@ const QuerySchema = z.object({ q: z.string().trim().max(80).default('') });
 
 @ApiTags('search')
 @Controller('v1/search')
+@RateLimit('autocomplete')
+@UseGuards(RateLimitGuard)
 export class SearchController {
   constructor(private readonly search: SearchService) {}
 

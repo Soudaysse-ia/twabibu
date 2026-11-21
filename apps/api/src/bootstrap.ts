@@ -20,11 +20,15 @@ export async function createApp(config: AppConfig = loadConfig()): Promise<INest
   app.enableCors({ origin: [config.APP_URL], credentials: true });
   app.enableShutdownHooks();
 
-  const openapi = new DocumentBuilder()
-    .setTitle('Twabibu API')
-    .setDescription('API de la plateforme Twabibu. Référence : docs/03-architecture/api.md')
-    .setVersion(API_VERSION)
-    .build();
-  SwaggerModule.setup('v1/docs', app, () => SwaggerModule.createDocument(app, openapi));
+  // The interactive documentation lists every route and its fields: useful locally and on the demo, a free map for
+  // an attacker in production. The site and the back-office do not need it.
+  if (config.APP_ENV !== 'production') {
+    const openapi = new DocumentBuilder()
+      .setTitle('Twabibu API')
+      .setDescription('API de la plateforme Twabibu. Référence : docs/03-architecture/api.md')
+      .setVersion(API_VERSION)
+      .build();
+    SwaggerModule.setup('v1/docs', app, () => SwaggerModule.createDocument(app, openapi));
+  }
   return app;
 }

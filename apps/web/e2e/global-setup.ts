@@ -30,7 +30,8 @@ export default async function globalSetup() {
   const keys = Object.values(DEMO).map((email) => `twabibu:otp-rate:${email}`);
   const url = process.env.REDIS_URL ?? 'redis://localhost:6379';
   await redis(url, ['DEL', ...keys]);
-  // Contact form limits (WEB-02) are per network address, and every journey comes from this machine.
-  const dropContactLimits = "for _, k in ipairs(redis.call('KEYS', ARGV[1])) do redis.call('DEL', k) end";
-  await redis(url, ['EVAL', dropContactLimits, '0', 'twabibu:contact-rate:*']);
+  // Contact form and public-route limits are per network address, and every journey comes from this machine.
+  const dropKeys = "for _, k in ipairs(redis.call('KEYS', ARGV[1])) do redis.call('DEL', k) end";
+  for (const pattern of ['twabibu:contact-rate:*', 'twabibu:rl:*'])
+    await redis(url, ['EVAL', dropKeys, '0', pattern]);
 }

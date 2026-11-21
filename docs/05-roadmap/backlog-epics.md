@@ -26,7 +26,7 @@ Statut : ☐ à faire · ◐ en cours · ☑ fait. Mettre à jour ce fichier à 
 | ☐ DATA-02 | Vue matérialisée de recherche + triggers `searchVector` | DATA-01 | M |
 | ☑ DATA-03 | Contrainte d'exclusion anti-chevauchement + tests | DATA-01 | S |
 | ☑ API-01 | Squelette NestJS (config, Prisma, Redis, BullMQ, OpenAPI, erreurs, logging, Sentry, health) | INFRA-01 | M |
-| ☐ API-02 | Guards : auth JWT/cookie, rôles, `MembershipGuard`, `PermissionsService`, rate limiting | API-01, AUTH-01 | M |
+| ◐ API-02 | Guards : auth JWT/cookie, rôles, `MembershipGuard`, `PermissionsService`, rate limiting — gardes d’authentification, Pro, Pharma et back-office en place ; limites de débit sur les codes de connexion, le contact et toutes les routes publiques en lecture (21/11/2026) ; pas de limite par compte sur les routes authentifiées | API-01, AUTH-01 | M |
 | ☑ CONTRACTS-01 | `packages/contracts` : enums, schémas Zod, erreurs, utilitaires de pagination | INFRA-01 | M |
 | ◐ CLIENT-01 | `packages/api-client` typé (fetch, auth, refresh, retry) utilisable web + mobile | CONTRACTS-01 | M |
 

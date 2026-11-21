@@ -1,9 +1,12 @@
-import { Controller, Get, Header, Query } from '@nestjs/common';
+import { Controller, Get, Header, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { RateLimit, RateLimitGuard } from '../common/rate-limit.js';
 import { DirectoryService } from './directory.service.js';
 
 @ApiTags('directory')
 @Controller('v1/directory')
+@RateLimit('publicRead')
+@UseGuards(RateLimitGuard)
 export class DirectoryController {
   constructor(private readonly directory: DirectoryService) {}
 
