@@ -8,9 +8,10 @@ set -euo pipefail
 [ "$(id -u)" = 0 ] || { echo "Run as root."; exit 1; }
 
 echo "== System updates and automatic security updates"
-apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get -y upgrade
-DEBIAN_FRONTEND=noninteractive apt-get -y install ca-certificates curl ufw fail2ban unattended-upgrades age rclone
+# On a brand-new server the provider's first automatic update may hold the package lock: wait for it (10 min max).
+apt-get -o DPkg::Lock::Timeout=600 update
+DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=600 -o Dpkg::Options::=--force-confold -y upgrade
+DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=600 -y install ca-certificates curl ufw fail2ban unattended-upgrades age rclone
 dpkg-reconfigure -f noninteractive unattended-upgrades
 timedatectl set-timezone UTC
 
@@ -30,8 +31,14 @@ chown deploy:deploy /home/deploy/.ssh/authorized_keys
 chmod 600 /home/deploy/.ssh/authorized_keys
 
 echo "== SSH: keys only"
-sed -i -E 's/^#?PasswordAuthentication .*/PasswordAuthentication no/; s/^#?PermitRootLogin .*/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
-systemctl reload ssh || systemctl reload sshd
+# Only once root has a key: a server created with a password would otherwise lock its owner out (the provider's web
+# console still works, but nobody expects that).
+if [ -s /root/.ssh/authorized_keys ]; then
+  sed -i -E 's/^#?PasswordAuthentication .*/PasswordAuthentication no/; s/^#?PermitRootLogin .*/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
+  systemctl reload ssh || systemctl reload sshd
+else
+  echo "   No SSH key for root: password login left on. Add your key to /root/.ssh/authorized_keys, then run this again."
+fi
 
 echo "== Firewall: SSH, HTTP, HTTPS only (Postgres and Redis stay inside Docker)"
 ufw default deny incoming

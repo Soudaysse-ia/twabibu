@@ -4,6 +4,7 @@
 
 | Runbook | Statut |
 |---|---|
+| `demo-en-ligne.md` — démo hébergée en 15 minutes sur un serveur neuf, sans domaine (`demo-quickstart.sh`, adresse `sslip.io`) | rédigé et testé avec Docker (21/11/2026), à valider sur un vrai serveur |
 | `mise-en-production-hetzner.md` — première installation d’un serveur (pré-production, production) | rédigé (19/11/2026), à valider au premier usage |
 | `deploiement.md` — déployer staging / prod, rollback | rédigé (19/11/2026) |
 | `sauvegarde-restauration.md` — sauvegarde quotidienne, test de restauration mensuel | rédigé (19/11/2026) |

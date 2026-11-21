@@ -1,5 +1,7 @@
 # Mise en production chez Hetzner (première installation)
 
+Pour une démo en ligne rapide, sans domaine ni Cloudflare : `demo-en-ligne.md` (un seul script, 15 minutes).
+
 Procédure à suivre **une fois par environnement** : d’abord la pré-production (`staging`, qui sert aussi de démo hébergée), puis la production. Compter environ deux heures la première fois. Les fichiers cités sont dans le dépôt : `infra/docker/`, `infra/caddy/`, `infra/scripts/`, `infra/env/`, `.github/workflows/deploy.yml`. Décisions : ADR-009 et ADR-020.
 
 ## 0. Ce qu’il faut avant de commencer

@@ -382,3 +382,19 @@ Vérifié : 104 tests de l’API (fenêtres de comptage, 31e vérification refus
 ## Écarts et limites
 - Pas encore de limite par compte sur les routes authentifiées (espace patient, Pro, Pharma), ni de cache des résultats de recherche.
 - Plusieurs personnes derrière la même adresse (cybercafé, réseau mobile partagé) partagent le compteur : les seuils sont larges pour cette raison ; à ajuster avec les journaux de production.
+
+# Dix-neuvième lot : démo en ligne en une commande (21 novembre 2026)
+
+But : réduire la mise en ligne de la démo à « créer un serveur et attendre ». Il ne fallait plus de domaine, de Cloudflare ni de réglage GitHub pour une première démo.
+
+## Fait
+- **`infra/scripts/demo-quickstart.sh`** : sur un Ubuntu 24.04 neuf, en root (ou par le champ « Cloud config » de Hetzner), installe le système (`server-setup.sh`), copie les fichiers de déploiement, crée `.env` une seule fois (adresse `<ip>.sslip.io` ou `DEMO_DOMAIN`, secrets tirés sur le serveur, e-mails et SMS factices, back-office fermé), puis lance `deploy.sh staging` (images publiques, migrations, données de démo). Relancé, il garde `.env` et met à jour.
+- **Adresse du site lue au démarrage** (`apps/web/lib/env.ts`) : `APP_URL` du serveur l’emporte sur l’adresse figée à la construction de l’image ; la même image sert la démo sur n’importe quelle adresse (liens canoniques, QR code des ordonnances).
+- **`server-setup.sh`** : ne coupe plus la connexion SSH par mot de passe si root n’a pas de clé (sinon le propriétaire se serait enfermé dehors) ; attend le verrou des paquets d’un serveur neuf au lieu d’échouer.
+- Procédure : `runbooks/demo-en-ligne.md`.
+
+Vérifié dans ce conteneur avec Docker : images construites à partir du code de la branche (les images publiées ne sont pas téléchargeables d’ici), registre local, nom `twabibu.localhost` ; 6 services en bonne santé, toutes les pages et `/api/ready` en 200 à travers Caddy en HTTPS, back-office refusé (403), documentation de l’API visible sur la démo, adresse canonique lue au démarrage ; parcours Playwright P1, P2, aide et contact verts (6 tests) ; deuxième passage sans toucher aux secrets.
+
+## Écarts et limites
+- Non vérifiable ici : `server-setup.sh` sur un vrai serveur et le certificat Let’s Encrypt pour `sslip.io` (service tiers, convient à une démo, pas à la production).
+- Le déploiement automatique depuis GitHub reste à brancher (secrets et `DEPLOY_ENABLED`).
