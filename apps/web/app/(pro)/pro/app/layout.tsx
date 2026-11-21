@@ -1,23 +1,37 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { Logo } from '@twabibu/ui';
 import { ProProvider } from '@/components/pro/ProContext';
 import { ProLogout } from '@/components/pro/ProLogout';
+import { PracticeSwitcher } from '@/components/pro/PracticeSwitcher';
 import { ProNav } from '@/components/pro/ProNav';
 import { VerificationBanner } from '@/components/pro/VerificationBanner';
 import { apiGet } from '@/lib/api-server';
+import { currentMembership, PRO_PRACTICE_COOKIE } from '@/lib/pro-practice';
 import type { ProMe } from '@/lib/pro-types';
 
-export const metadata: Metadata = { title: { default: 'Twabibu Pro', template: '%s | Twabibu Pro' }, robots: { index: false } };
+export const metadata: Metadata = {
+  title: { default: 'Twabibu Pro', template: '%s | Twabibu Pro' },
+  robots: { index: false },
+};
 
-const ROLE: Record<string, string> = { OWNER: 'Responsable', ADMIN: 'Administrateur', PRACTITIONER: 'Praticien', SECRETARY: 'Secrétariat' };
+const ROLE: Record<string, string> = {
+  OWNER: 'Responsable',
+  ADMIN: 'Administrateur',
+  PRACTITIONER: 'Praticien',
+  SECRETARY: 'Secrétariat',
+};
 
 /** Twabibu Pro shell: light top bar, side navigation, practice context for every page. */
 export default async function ProLayout({ children }: { children: React.ReactNode }) {
   const me = await apiGet<ProMe>('/v1/pro/me');
   if (!me.ok) redirect('/pro/connexion');
-  const membership = me.data.memberships[0];
+  const membership = currentMembership(
+    me.data.memberships,
+    (await cookies()).get(PRO_PRACTICE_COOKIE)?.value,
+  );
   if (!membership) redirect('/pro/connexion?erreur=aucun-cabinet');
 
   return (
@@ -29,8 +43,16 @@ export default async function ProLayout({ children }: { children: React.ReactNod
               <Link href="/pro/app" aria-label="Twabibu Pro, accueil">
                 <Logo tone="blue" height={34} />
               </Link>
-              <span className="hidden rounded-md bg-primary-soft px-2 py-0.5 text-xs font-bold text-primary sm:inline">Pro</span>
-              <span className="hidden truncate text-sm text-text-muted md:inline">{membership.organizationName}</span>
+              <span className="hidden rounded-md bg-primary-soft px-2 py-0.5 text-xs font-bold text-primary sm:inline">
+                Pro
+              </span>
+              {me.data.memberships.length > 1 ? (
+                <PracticeSwitcher current={membership.organizationId} practices={me.data.memberships} />
+              ) : (
+                <span className="hidden truncate text-sm text-text-muted md:inline">
+                  {membership.organizationName}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <span className="truncate text-right text-sm leading-tight">
