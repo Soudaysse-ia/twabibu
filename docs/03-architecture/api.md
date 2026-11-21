@@ -1,6 +1,6 @@
 # API REST `/v1` (NestJS)
 
-Conventions : JSON, `camelCase`, dates ISO 8601 UTC, pagination par curseur (`?cursor=&limit=`) ou page pour le SEO, erreurs `{ code, message, details? }` avec codes de `packages/contracts/errors.ts`. OpenAPI généré automatiquement sur `/v1/docs`. Toutes les routes sont versionnées. Authentification : `Authorization: Bearer <accessToken>` (mobile) ou cookie `tw_session` httpOnly (web, `SameSite=Lax`) ; toute écriture (POST, PUT, PATCH, DELETE) dont l’en-tête `Origin` n’est ni le site ni le back-office, ou marquée `Sec-Fetch-Site: cross-site`, est refusée en 403 `FORBIDDEN` (ADR-021).
+Conventions : JSON, `camelCase`, dates ISO 8601 UTC, pagination par curseur (`?cursor=&limit=`) ou page pour le SEO, erreurs `{ code, message, details? }` avec codes de `packages/contracts/errors.ts`. OpenAPI généré automatiquement sur `/v1/docs` (en local et sur la démo ; jamais en production). Toutes les routes sont versionnées. Authentification : `Authorization: Bearer <accessToken>` (mobile) ou cookie `tw_session` httpOnly (web, `SameSite=Lax`) ; toute écriture (POST, PUT, PATCH, DELETE) dont l’en-tête `Origin` n’est ni le site ni le back-office, ou marquée `Sec-Fetch-Site: cross-site`, est refusée en 403 `FORBIDDEN` (ADR-021).
 
 Rôles (garde `@Roles()`): `public`, `patient`, `pro:practitioner`, `pro:secretary`, `pro:admin`, `platform:admin`. Les routes Pro sont scoppées par `organizationId` (en-tête `X-Organization-Id` ou dans l'URL) et vérifiées par `MembershipGuard`.
 
@@ -156,7 +156,7 @@ Rôles (garde `@Roles()`): `public`, `patient`, `pro:practitioner`, `pro:secreta
 
 ## Limites de débit (par IP / par compte)
 - OTP : 3 demandes / 15 min / numéro, 10 / h / IP.
-- Recherche publique : 60 req / min / IP.
+- Routes publiques en lecture (`apps/api/src/common/rate-limit.ts`, fenêtre d’une minute par adresse, 429 `RATE_LIMITED` avec `Retry-After`) : résultats de recherche 60 req / min ; autocomplétion 120 ; profils, créneaux, annuaire, pharmacies et médicaments 120 ; vérification d’une ordonnance par son code 30. Si Redis ne répond pas, la requête passe (données publiques). Le rendu côté serveur du site transmet l’adresse du visiteur (`X-Forwarded-For` écrit par Caddy).
 - Verrous de créneau : 10 / min / session.
 - Formulaire de contact : 5 messages / h / IP et 3 / h / adresse e-mail (`apps/api/src/contact/contact-rules.ts`).
 - Login : 5 échecs → délai progressif, 20 → blocage 1 h.

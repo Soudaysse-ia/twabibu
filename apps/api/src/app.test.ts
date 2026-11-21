@@ -5,7 +5,9 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { ApiErrorSchema, HealthSchema } from '@twabibu/contracts';
 import { createApp } from './bootstrap.js';
+import { secondsToNextWindow } from './common/rate-limit.js';
 import { loadConfig } from './config.js';
+import { RedisService } from './redis/redis.service.js';
 
 // Integration tests: need PostgreSQL (migrated + seeded) and Redis, as in .env.
 describe('Twabibu API', () => {
@@ -38,6 +40,29 @@ describe('Twabibu API', () => {
     await request(app.getHttpServer()).post('/v1/auth/otp/request').set('Origin', new URL(config.APP_URL).origin).send({}).expect(400);
   });
 
+  it('limits public reads per address and says when to retry', async () => {
+    const redis = app.get(RedisService).client;
+    const clear = async () => {
+      const keys = await redis.keys('twabibu:rl:prescriptionCheck:*');
+      if (keys.length) await redis.del(...keys);
+    };
+    await clear();
+    // Counters reset every minute: start early in a window so the 31 requests below all land in the same one.
+    const left = secondsToNextWindow(Date.now());
+    if (left < 15) await new Promise((r) => setTimeout(r, left * 1000 + 100));
+    try {
+      const server = app.getHttpServer();
+      // Two visitors behind the site: each has its own counter (X-Forwarded-For is trusted from private addresses only).
+      for (let i = 0; i < 30; i++) await request(server).get('/v1/o/ZZZZZZZZZZ').set('X-Forwarded-For', '41.1.2.3').expect(404);
+      const limited = await request(server).get('/v1/o/ZZZZZZZZZZ').set('X-Forwarded-For', '41.1.2.3').expect(429);
+      assert.equal(ApiErrorSchema.parse(limited.body).code, 'RATE_LIMITED');
+      assert.ok(Number(limited.headers['retry-after']) >= 1);
+      await request(server).get('/v1/o/ZZZZZZZZZZ').set('X-Forwarded-For', '41.9.9.9').expect(404);
+    } finally {
+      await clear();
+    }
+  });
+
   it('serves the three islands and the seeded localities', async () => {
     const islands = await request(app.getHttpServer()).get('/v1/directory/islands').expect(200);
     assert.deepEqual(islands.body.map((i: { slug: string }) => i.slug).sort(), ['mwali', 'ndzuani', 'ngazidja']);
@@ -68,5 +93,17 @@ describe('Twabibu API', () => {
     const res = await request(app.getHttpServer()).get('/v1/docs-json').expect(200);
     assert.equal(res.body.info.title, 'Twabibu API');
     assert.ok(res.body.paths['/v1/search/suggest']);
+  });
+
+  it('keeps the documentation private in production', async () => {
+    const config = loadConfig({ ...process.env, NODE_ENV: 'test', APP_ENV: 'production', EMAIL_PROVIDER: 'brevo', EMAIL_API_KEY: 'test-only' });
+    const production = await createApp(config);
+    await production.init();
+    try {
+      await request(production.getHttpServer()).get('/v1/docs-json').expect(404);
+      await request(production.getHttpServer()).get('/v1/docs').expect(404);
+    } finally {
+      await production.close();
+    }
   });
 });

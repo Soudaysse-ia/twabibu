@@ -3,6 +3,7 @@ import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 import { AuthGuard, CurrentUser, PatientGuard } from '../auth/auth.guard.js';
 import type { SessionUser } from '../auth/auth.types.js';
+import { RateLimit, RateLimitGuard } from '../common/rate-limit.js';
 import { ZodValidationPipe } from '../common/zod-validation.pipe.js';
 import { OrdersService } from './orders.service.js';
 import { CurrentPharma, PharmaGuard, type PharmaMembership } from './pharma.guard.js';
@@ -66,6 +67,8 @@ const DutyQuery = z.object({ island: z.enum(['ngazidja', 'ndzuani', 'mwali']), d
 
 @ApiTags('pharmacies')
 @Controller('v1')
+@RateLimit('publicRead')
+@UseGuards(RateLimitGuard)
 export class PublicPharmaciesController {
   constructor(private readonly pharmacies: PharmaciesService) {}
 

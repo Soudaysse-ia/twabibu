@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, Req } from '@nestjs/common';
+import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 import { dateKeySchema } from '@twabibu/contracts';
@@ -8,6 +8,7 @@ import { AuthService } from '../auth/auth.service.js';
 import type { AuthedRequest } from '../auth/auth.types.js';
 import { ApiException } from '../common/api-exception.js';
 import { BOOKING_COOKIE, readCookie } from '../common/cookies.js';
+import { RateLimit, RateLimitGuard } from '../common/rate-limit.js';
 import { ZodValidationPipe } from '../common/zod-validation.pipe.js';
 import { PractitionersService } from './practitioners.service.js';
 
@@ -32,6 +33,8 @@ const AvailabilitySchema = z
 
 @ApiTags('practitioners')
 @Controller('v1')
+@RateLimit('publicRead')
+@UseGuards(RateLimitGuard)
 export class PractitionersController {
   constructor(
     private readonly practitioners: PractitionersService,
@@ -39,6 +42,7 @@ export class PractitionersController {
   ) {}
 
   @Get('search/practitioners')
+  @RateLimit('search')
   @ApiOperation({ summary: 'Résultats de recherche avec la grille de créneaux des 5 prochains jours.' })
   async search(@Query(new ZodValidationPipe(SearchSchema)) query: z.infer<typeof SearchSchema>, @Req() req: AuthedRequest) {
     const user = await sessionFromRequest(this.auth, req);

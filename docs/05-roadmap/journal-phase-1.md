@@ -366,3 +366,19 @@ Vérifié : 100 tests de l’API (dont 5 sur le contact : envoi échappé au sup
 - Textes juridiques à faire valider (LEGAL-01) : identité de l’éditeur, durée de conservation des notes des soignants, droit applicable.
 - Les articles sont dans le code : leur gestion dans le back-office (SPEC-11 §5) reste à faire avec ADMIN-06.
 - Le message de contact est visible par le support dans le journal des notifications ; l’avertissement sous le champ demande de n’y mettre aucune information médicale, sans pouvoir l’empêcher.
+
+# Dix-huitième lot : limites de débit des routes publiques, documentation de l’API fermée en production (21 novembre 2026)
+
+Point 3 de la revue de code et ticket API-02 (partie limitation de débit), avant la mise en ligne.
+
+## Fait
+- **Limites de débit** (`apps/api/src/common/rate-limit.ts`) : `@RateLimit(...)` + `RateLimitGuard`, compteur Redis par adresse et par minute, 429 `RATE_LIMITED` avec `Retry-After`. Résultats de recherche 60 / min, autocomplétion 120, profils, créneaux, annuaire, pharmacies et médicaments 120, vérification d’ordonnance par code 30. Si Redis tombe, les lectures publiques passent (le site reste utilisable) et un avertissement est journalisé.
+- **Adresse du visiteur dans le rendu côté serveur** (`apps/web/lib/api-server.ts`) : le site transmet `X-Forwarded-For` (écrit par Caddy, qui remplace ce qu’envoie le client) ; sans cela, toutes les pages rendues par le serveur auraient compté pour une seule adresse, celle du site, et la limite aurait bloqué tout le monde.
+- **Documentation interactive** `/v1/docs` servie seulement hors production (local et démo).
+- Parcours de bout en bout : les compteurs sont remis à zéro avant chaque passage (`e2e/global-setup.ts`).
+
+Vérifié : 104 tests de l’API (fenêtres de comptage, 31e vérification refusée avec `Retry-After`, autre visiteur non touché, `/v1/docs` en 404 avec `APP_ENV=production`), 8 parcours Playwright sur ordinateur et téléphone sans atteindre les limites, compteur créé à l’adresse du visiteur lors d’une recherche rendue par le serveur.
+
+## Écarts et limites
+- Pas encore de limite par compte sur les routes authentifiées (espace patient, Pro, Pharma), ni de cache des résultats de recherche.
+- Plusieurs personnes derrière la même adresse (cybercafé, réseau mobile partagé) partagent le compteur : les seuils sont larges pour cette raison ; à ajuster avec les journaux de production.

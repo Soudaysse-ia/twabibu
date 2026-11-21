@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { CurrentUser, PatientGuard } from '../auth/auth.guard.js';
 import type { SessionUser } from '../auth/auth.types.js';
 import { ApiException } from '../common/api-exception.js';
+import { RateLimit, RateLimitGuard } from '../common/rate-limit.js';
 import { ZodValidationPipe } from '../common/zod-validation.pipe.js';
 import type { MembershipContext } from '../pro/permissions.js';
 import { CurrentMembership, ProGuard } from '../pro/pro.guard.js';
@@ -146,6 +147,8 @@ export class PracticePrescriptionsController {
 
 @ApiTags('medical')
 @Controller('v1')
+@RateLimit('publicRead')
+@UseGuards(RateLimitGuard)
 export class PublicMedicalController {
   constructor(private readonly prescriptions: PrescriptionsService) {}
 
@@ -156,6 +159,7 @@ export class PublicMedicalController {
   }
 
   @Get('o/:code')
+  @RateLimit('prescriptionCheck')
   @ApiOperation({ summary: 'Vérification publique d’une ordonnance (QR code) : validité et prescripteur, sans détail médical.' })
   verify(@Param('code') code: string) {
     if (!/^[A-Z2-9]{10}$/.test(code)) throw new ApiException('NOT_FOUND', 'Unknown prescription');
