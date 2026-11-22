@@ -423,3 +423,19 @@ Suite de PRO-05 : un compte peut maintenant appartenir à plusieurs cabinets (ti
 - Après une invitation acceptée, l’espace Pro s’ouvre sur le cabinet rejoint ; la page imprimable d’une ordonnance suit le même choix.
 
 Vérifié : 2 tests unitaires du choix, nouveau parcours Playwright (un soignant inscrit avec son cabinet rejoint celui de la démo comme administrateur, arrive dans le cabinet rejoint, revient au sien, le choix tient d’une page à l’autre), 10 parcours au total ; capture à 375 px et 1280 px sans débordement.
+
+# Vingt-troisième lot : délivrance visible et parcours P8 (22 novembre 2026)
+
+QA-01 P8 (ordonnance → pharmacie) et la partie « dispensation » de RX-05. En écrivant le parcours, un manque est apparu : la délivrance était enregistrée à la remise en pharmacie, mais aucun écran ne la montrait, ni au patient ni au prescripteur, contrairement à SPEC-14.
+
+## Fait
+- **API** : chaque ordonnance porte ses délivrances (date, pharmacie, médicaments et quantités remis, substitution) dans la liste du patient, le document de l’ordonnance et la fiche du dossier vue par le praticien ; construites à un seul endroit (`apps/api/src/medical/dispensation-view.ts`).
+- **Site** : encadré « Délivrée le … par … » sous l’ordonnance dans « Mes ordonnances » et dans la fiche patient Pro, où le statut de l’ordonnance s’affiche aussi désormais.
+- **Parcours P8** (`apps/web/e2e/prescription-pharmacy.e2e.ts`) : nouvelle patiente, rendez-vous avec Dr Amina Saïd, consultation et ordonnance signée, envoi à la Pharmacie du Port, réponse ligne par ligne, commande en retrait, préparation et remise, délivrance visible de la patiente et de la praticienne.
+- Test de la liste « mes patients » rendu indépendant de l’ordre des pages (les parcours ajoutent des patients à la praticienne de démo).
+
+Vérifié : 113 tests de l’API (le test pharmacie vérifie la même délivrance dans les trois vues), 11 parcours Playwright, captures à 375 px et 1280 px côté patient et côté praticien.
+
+## Écarts et limites
+- Renouvellements d’ordonnance (plusieurs délivrances successives) : à faire avec le reste de RX-05.
+- Restent les parcours P4 (journée du secrétariat) et P5 (absence et rendez-vous touchés).

@@ -5,6 +5,7 @@ import { FileText } from 'lucide-react';
 import { fr } from '@twabibu/i18n';
 import { Badge, Card, Container } from '@twabibu/ui';
 import { formatDateLong } from '@twabibu/utils';
+import { DispensationList, type Dispensation } from '@/components/DispensationList';
 import { PrescriptionPharmacyPanel } from '@/components/pharmacy/PrescriptionPharmacyPanel';
 import { apiGet } from '@/lib/api-server';
 
@@ -17,6 +18,7 @@ interface Item {
   expiresAt: string | null;
   prescriber: string;
   lines: { label: string; posologyText: string }[];
+  dispensations: Dispensation[];
 }
 
 export default async function MyPrescriptionsPage() {
@@ -49,6 +51,7 @@ export default async function MyPrescriptionsPage() {
                       </li>
                     ))}
                   </ul>
+                  <DispensationList dispensations={p.dispensations} />
                   <Link href={`/mon-compte/ordonnance/${p.id}`} className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-primary hover:underline">
                     <FileText aria-hidden="true" size={14} /> Voir et imprimer
                   </Link>

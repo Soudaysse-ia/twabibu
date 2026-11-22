@@ -207,5 +207,13 @@ describe('Pharmacies, orders and prescriptions sent to a pharmacy', () => {
     assert.equal(doc.status, 'PARTIALLY_DISPENSED');
     const dispensation = await prisma.dispensation.findFirstOrThrow({ where: { prescriptionId: signed.id } });
     assert.equal(dispensation.pharmacyId, port);
+    // RX-05: the prescriber, the patient and the printable prescription say what was handed over, where and when.
+    const expected = { pharmacy: 'Pharmacie de démonstration du Port', lines: [{ label: 'Amoxicilline 500 mg', quantity: 2, substitutedBy: null }] };
+    const shown = (d: { pharmacy: string; lines: unknown[] }[]) => d.map(({ pharmacy, lines }) => ({ pharmacy, lines }));
+    assert.deepEqual(shown(doc.dispensations), [expected]);
+    const record = (await amina.get(`/v1/pro/orgs/${clinic}/patients/${file.id}/record`).expect(200)).body;
+    assert.deepEqual(shown(record.prescriptions.find((x: { id: string }) => x.id === signed.id).dispensations), [expected]);
+    const mine = (await patient.get('/v1/me/prescriptions').expect(200)).body;
+    assert.deepEqual(shown(mine.find((x: { id: string }) => x.id === signed.id).dispensations), [expected]);
   });
 });

@@ -1,4 +1,5 @@
 /** Shapes of the medical-record API (apps/api/src/medical). */
+import type { Dispensation } from '@/components/DispensationList';
 
 export type VitalType = 'WEIGHT_KG' | 'HEIGHT_CM' | 'SYSTOLIC_MMHG' | 'DIASTOLIC_MMHG' | 'HEART_RATE_BPM' | 'TEMPERATURE_C' | 'SPO2_PERCENT' | 'GLYCEMIA_G_L' | 'HEAD_CIRCUMFERENCE_CM';
 
@@ -13,7 +14,14 @@ export interface RecordSynthesis {
   vitals: Partial<Record<VitalType, { value: number; measuredAt: string }>>;
   vitalSeries: { type: VitalType; value: number; measuredAt: string }[];
   consultations: { id: string; createdAt: string; practitioner: string; mine: boolean; reason: string | null; diagnoses: { label: string; code?: string }[]; closed: boolean }[];
-  prescriptions: { id: string; status: string; signedAt: string | null; qrCode: string | null; lines: { label: string; posologyText: string }[] }[];
+  prescriptions: {
+    id: string;
+    status: string;
+    signedAt: string | null;
+    qrCode: string | null;
+    lines: { label: string; posologyText: string }[];
+    dispensations: Dispensation[];
+  }[];
 }
 
 export interface ConsultationDetail {

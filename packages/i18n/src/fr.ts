@@ -297,6 +297,8 @@ export const fr = {
     lineStatus: { AVAILABLE: 'Disponible', SUBSTITUTE: 'Équivalent proposé', UNAVAILABLE: 'Indisponible' } as Record<string, string>,
     readyIn: (m: number) => (m < 60 ? `Prête dans ${m} min` : `Prête dans ${Math.round(m / 60)} h`),
     acceptAnswer: 'Commander les produits disponibles',
+    dispensedOn: (date: string, pharmacy: string) => `Délivrée le ${date} par ${pharmacy}`,
+    substitutedBy: (name: string) => `remplacé par ${name}`,
     prescriptionStatus: { SIGNED: 'Valable', SENT_TO_PHARMACY: 'Envoyée en pharmacie', PARTIALLY_DISPENSED: 'Délivrée en partie', DISPENSED: 'Délivrée', EXPIRED: 'Expirée', CANCELLED: 'Annulée' } as Record<string, string>,
   },
   reminders: {
