@@ -69,6 +69,41 @@ export class PractitionersService {
     return `/${p.speciality.slug}/${practice?.locality.slug ?? 'comores'}/${p.slug}`;
   }
 
+  /**
+   * Everything search engines may list (SPEC-01 §10, SEARCH-08): each public profile, and each « speciality × place »
+   * page that has at least one result, for a locality or a whole island. Same visibility rule as the search itself.
+   */
+  async sitemap() {
+    const rows = await this.prisma.practitioner.findMany({
+      where: publicPractitioner,
+      select: {
+        slug: true,
+        updatedAt: true,
+        speciality: { select: { slug: true, name: true } },
+        practices: { select: { practice: { select: { locality: { select: { slug: true, name: true, island: { select: { slug: true, name: true } } } } } } } },
+      },
+      orderBy: { slug: 'asc' },
+    });
+    const pages = new Map<string, { url: string; speciality: string; place: string; kind: 'LOCALITY' | 'ISLAND'; count: number }>();
+    const practitioners = rows.map((p) => {
+      const places = new Map<string, { slug: string; name: string; kind: 'LOCALITY' | 'ISLAND' }>();
+      for (const { practice } of p.practices) {
+        places.set(practice.locality.slug, { slug: practice.locality.slug, name: practice.locality.name, kind: 'LOCALITY' });
+        places.set(practice.locality.island.slug, { slug: practice.locality.island.slug, name: practice.locality.island.name, kind: 'ISLAND' });
+      }
+      // Counted once per practitioner and place, even with two practices in the same town.
+      for (const place of places.values()) {
+        const url = `/${p.speciality.slug}/${place.slug}`;
+        const page = pages.get(url) ?? { url, speciality: p.speciality.name, place: place.name, kind: place.kind, count: 0 };
+        page.count += 1;
+        pages.set(url, page);
+      }
+      const main = p.practices[0]?.practice.locality.slug ?? 'comores';
+      return { url: `/${p.speciality.slug}/${main}/${p.slug}`, updatedAt: p.updatedAt };
+    });
+    return { practitioners, pages: [...pages.values()].sort((a, b) => a.url.localeCompare(b.url)) };
+  }
+
   /** Public profile (SPEC-02). Only verified, published practitioners are ever returned. */
   async profile(slug: string) {
     const p = await this.prisma.practitioner.findFirst({ where: { slug, ...publicPractitioner }, include: profileInclude });

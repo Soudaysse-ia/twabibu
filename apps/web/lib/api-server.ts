@@ -28,3 +28,24 @@ export async function apiGet<T>(
     return { ok: false, status: 503 };
   }
 }
+
+/**
+ * Public GET shared by every visitor (SEO pages, sitemap): no cookie, kept in the Next data cache for `revalidate`
+ * seconds. The visitor's address is still forwarded so the API rate limits count them, not the site.
+ */
+export async function apiGetPublic<T>(
+  path: string,
+  revalidate: number,
+): Promise<{ ok: true; data: T } | { ok: false; status: number }> {
+  const visitor = (await headers()).get('x-forwarded-for')?.split(',')[0]?.trim();
+  try {
+    const res = await fetch(`${API_INTERNAL_URL}${path}`, {
+      headers: visitor ? { 'x-forwarded-for': visitor } : {},
+      next: { revalidate },
+    });
+    if (!res.ok) return { ok: false, status: res.status };
+    return { ok: true, data: (await res.json()) as T };
+  } catch {
+    return { ok: false, status: 503 };
+  }
+}

@@ -139,6 +139,25 @@ export const fr = {
       message: 'Votre message doit faire entre 10 et 3 000 caractères.',
     } as Record<string, string>,
   },
+  seo: {
+    title: (speciality: string, place: string) => `${speciality} ${place} : prenez rendez-vous en ligne`,
+    description: (speciality: string, place: string, count: number) =>
+      `${count} ${count > 1 ? 'soignants' : 'soignant'} (${speciality.toLowerCase()}) à ${place} sur Twabibu. Comparez les disponibilités et prenez rendez-vous en ligne, gratuitement.`,
+    heading: (speciality: string, place: string) => `${speciality} à ${place}`,
+    intro: (speciality: string, place: string, count: number) =>
+      count > 1
+        ? `${count} soignants vérifiés (${speciality.toLowerCase()}) reçoivent à ${place}. Comparez leurs prochaines disponibilités et réservez en ligne, gratuitement et sans appeler.`
+        : `Un soignant vérifié (${speciality.toLowerCase()}) reçoit à ${place}. Consultez ses prochaines disponibilités et réservez en ligne, gratuitement et sans appeler.`,
+    breadcrumb: 'Fil d’Ariane',
+    home: 'Accueil',
+    refine: 'Affiner la recherche (disponibilités, langues, paiement…)',
+    samePlaceOther: (place: string) => `Autres spécialités à ${place}`,
+    sameSpecialityOther: (speciality: string) => `${speciality} ailleurs aux Comores`,
+    previous: 'Page précédente',
+    next: 'Page suivante',
+    pageOf: (page: number, pages: number) => `Page ${page} sur ${pages}`,
+    pagination: 'Pagination',
+  },
   proShell: {
     practice: 'Cabinet',
   },

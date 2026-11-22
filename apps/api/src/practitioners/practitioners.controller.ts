@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Header, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 import { dateKeySchema } from '@twabibu/contracts';
@@ -47,6 +47,13 @@ export class PractitionersController {
   async search(@Query(new ZodValidationPipe(SearchSchema)) query: z.infer<typeof SearchSchema>, @Req() req: AuthedRequest) {
     const user = await sessionFromRequest(this.auth, req);
     return this.practitioners.search({ ...query, patientProfileId: user?.patientProfileId });
+  }
+
+  @Get('search/sitemap')
+  @Header('Cache-Control', 'public, max-age=600')
+  @ApiOperation({ summary: 'Pages « spécialité × lieu » ayant au moins un résultat, et profils publics (plan du site, SEARCH-08).' })
+  sitemap() {
+    return this.practitioners.sitemap();
   }
 
   @Get('practitioners/:slug')
