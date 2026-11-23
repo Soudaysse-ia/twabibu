@@ -17,6 +17,8 @@ Patient (connecté ou non), moteurs de recherche (SEO).
 8. **Pagination** : 20 résultats par page, « Page précédente / suivante », `rel=prev/next`.
 9. **Carte** : marqueurs numérotés synchronisés avec la liste (survol → mise en évidence), chargée à la demande sur mobile (« Afficher la carte »), toujours visible sur desktop en colonne droite collante.
 10. **SEO** : URL canonique `/{specialite}/{localite}` (ex. `/pediatre/moroni`), titre « Pédiatre Moroni : prenez rendez-vous en ligne | Twabibu », description, H1 « Pédiatre à Moroni », texte d'introduction, JSON-LD `ItemList` de `Physician`, fil d'Ariane. Pages générées en ISR (revalidation 10 min) pour les combinaisons spécialité × localité ayant ≥ 1 résultat.
+
+> **Réalisé le 22/11/2026 (SEARCH-08)** : aussi pour les îles (`/pediatre/ngazidja`). Liste des combinaisons et des profils par `GET /v1/search/sitemap`, données mises en cache 10 minutes côté site ; une combinaison sans résultat répond 404. `sitemap.xml` (pages publiques, articles d’aide, combinaisons, profils) et `robots.txt` lu à chaque requête : tout est fermé aux moteurs tant que `ALLOW_INDEXING=true` n’est pas posé dans le `.env` du serveur (à faire au lancement public seulement) ; ensuite les espaces privés, la recherche filtrée et la page de démo restent exclus.
 11. **Sans résultat** : état vide avec suggestions (élargir à l'île, spécialités proches), lien « Vous êtes soignant ? Inscrivez votre cabinet ».
 
 ## Écrans

@@ -424,6 +424,27 @@ Suite de PRO-05 : un compte peut maintenant appartenir à plusieurs cabinets (ti
 
 Vérifié : 2 tests unitaires du choix, nouveau parcours Playwright (un soignant inscrit avec son cabinet rejoint celui de la démo comme administrateur, arrive dans le cabinet rejoint, revient au sien, le choix tient d’une page à l’autre), 10 parcours au total ; capture à 375 px et 1280 px sans débordement.
 
+# Vingt-deuxième lot : pages pour les moteurs de recherche (22 novembre 2026)
+
+Ticket SEARCH-08 (SPEC-01 §10), pour le trafic venu de Google au lancement : « pédiatre Moroni », « médecin Anjouan ».
+
+## Fait
+- **API** `GET /v1/search/sitemap` : pages « spécialité × localité » et « spécialité × île » ayant au moins un soignant vérifié et publié, avec leur nombre ; adresses des profils publics. Même règle de visibilité que la recherche, limite de débit des lectures publiques, cache 10 minutes.
+- **Pages** `/{spécialité}/{lieu}` (« Médecin généraliste à Moroni ») :
+  - titre, description, adresse canonique ;
+  - fil d’Ariane, introduction, résultats avec carte et créneaux, lien vers la recherche filtrée ;
+  - liens vers les autres spécialités du lieu et les autres lieux de la spécialité ;
+  - JSON-LD `ItemList` de `Physician` et `BreadcrumbList` ;
+  - une combinaison sans résultat ou une page au-delà de la dernière répond 404 ;
+  - données partagées entre visiteurs et rafraîchies toutes les 10 minutes, l’adresse du visiteur restant transmise pour les limites de débit.
+- **`sitemap.xml`** : pages publiques, articles d’aide, pages « spécialité × lieu », profils (date de mise à jour).
+- **`robots.txt`** lu à chaque requête : fermé tant que `ALLOW_INDEXING=true` n’est pas dans le `.env` du serveur (à faire au lancement seulement, ajouté à la liste de vérification de la procédure de mise en production) ; ouvert, il exclut les espaces privés, la recherche filtrée et la page de démo, et annonce le plan du site.
+
+Vérifié : 114 tests de l’API, dont un qui compare chaque page du plan du site au nombre de résultats de la recherche et vérifie l’absence des soignants non vérifiés ; 13 parcours Playwright, dont 3 nouveaux (page « Médecin généraliste à Moroni », passage vers « Pédiatre à Moroni », 404, plan du site, `robots.txt` fermé) ; `robots.txt` ouvert contrôlé avec `ALLOW_INDEXING=true` ; données structurées lues et valides ; captures à 375 px et 1280 px.
+
+## Écarts et limites
+- Pas encore de texte rédigé propre à chaque spécialité (conseils, questions fréquentes) : l’introduction est la même pour toutes.
+- Les créneaux affichés sur ces pages peuvent dater de 10 minutes ; la réservation revérifie toujours le créneau (verrou SPEC-12).
 # Vingt-troisième lot : délivrance visible et parcours P8 (22 novembre 2026)
 
 QA-01 P8 (ordonnance → pharmacie) et la partie « dispensation » de RX-05. En écrivant le parcours, un manque est apparu : la délivrance était enregistrée à la remise en pharmacie, mais aucun écran ne la montrait, ni au patient ni au prescripteur, contrairement à SPEC-14.

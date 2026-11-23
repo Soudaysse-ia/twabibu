@@ -100,3 +100,4 @@ Une sauvegarde sur le même disque n’en est pas une. Le plus simple : une **He
 - [ ] `ssh deploy@<IP> 'ls -l /srv/twabibu/backups'` montre une sauvegarde du jour ; `./scripts/restore.sh --test <fichier>` réussit.
 - [ ] Enregistrements SPF et DKIM de Brevo ajoutés dans Cloudflare (sinon les codes partent en indésirables).
 - [ ] Les secrets sont dans le gestionnaire de mots de passe, nulle part ailleurs.
+- [ ] Au lancement public seulement (textes juridiques validés, LEGAL-01) : `ALLOW_INDEXING=true` dans `/srv/twabibu/.env`, puis `docker compose up -d web` ; vérifier que `https://<domaine>/robots.txt` autorise `/` et annonce `sitemap.xml`. Jamais sur la pré-production.
