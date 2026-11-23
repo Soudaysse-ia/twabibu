@@ -27,7 +27,12 @@ test('un visiteur signale un profil, l’équipe Twabibu traite le signalement',
   await admin.getByRole('button', { name: 'Valider' }).click();
   await admin.getByLabel('Code de l’application d’authentification').fill('000000');
   await admin.getByRole('button', { name: 'Valider' }).click();
-  await admin.goto(`${ADMIN_URL}/signalements`);
+  // The menu appears once both codes are checked: follow it rather than loading the page while sign-in finishes.
+  await admin
+    .getByRole('navigation', { name: 'Back-office' })
+    .getByRole('link', { name: 'Signalements' })
+    .click();
+  await expect(admin.getByRole('heading', { level: 1, name: 'Signalements' })).toBeVisible();
   const card = admin.getByRole('listitem').filter({ hasText: details });
   await expect(card.getByText('Informations inexactes (adresse, téléphone, horaires, tarifs)')).toBeVisible();
   await expect(card.getByText('Visiteur non connecté', { exact: false })).toBeVisible();
