@@ -152,6 +152,9 @@ describe('Practice space', () => {
     assert.equal(arrived.status, 'ARRIVED');
     assert.equal((await secretary.patch(`/v1/pro/orgs/${orgId}/appointments/${appt.id}`).send({ status: 'NO_SHOW' }).expect(409)).body.code, 'CONFLICT');
     await secretary.patch(`/v1/pro/orgs/${orgId}/appointments/${appt.id}`).send({ status: 'CONFIRMED' }).expect(200);
+    // Not before the appointment time: a no-show counts against the patient (SPEC-05 §Règles 4).
+    assert.equal((await secretary.patch(`/v1/pro/orgs/${orgId}/appointments/${appt.id}`).send({ status: 'NO_SHOW' }).expect(409)).body.code, 'CONFLICT');
+    await prisma.appointment.update({ where: { id: appt.id }, data: { startsAt: new Date(Date.now() - 400 * 86_400_000), endsAt: new Date(Date.now() - 400 * 86_400_000 + 1_800_000) } }); // far from the demo history
     const noShow = (await secretary.patch(`/v1/pro/orgs/${orgId}/appointments/${appt.id}`).send({ status: 'NO_SHOW' }).expect(200)).body;
     assert.equal(noShow.patient.noShowCount, 1);
     const back = (await secretary.patch(`/v1/pro/orgs/${orgId}/appointments/${appt.id}`).send({ status: 'CONFIRMED' }).expect(200)).body;

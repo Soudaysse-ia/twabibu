@@ -28,7 +28,7 @@ Champs : agenda, patient (recherche instantanée nom/téléphone ; « + Nouveau 
 1. Un agenda appartient à un praticien et à un lieu ; un praticien peut avoir plusieurs agendas ; une secrétaire voit les agendas que son rôle autorise.
 2. Le cabinet peut toujours créer un RDV hors plages en ligne (dans les horaires d'ouverture ou non) ; seul le patient est contraint par les plages.
 3. Chevauchement : interdit par défaut (contrainte base) ; « Forcer » crée un RDV avec `capacity` dépassée, signalé en rouge (praticien/admin seulement).
-4. Statuts et transitions : `PENDING_VALIDATION → CONFIRMED | CANCELLED_BY_PRACTICE` ; `CONFIRMED → ARRIVED → IN_CONSULTATION → DONE` ; `CONFIRMED → NO_SHOW` (après l'heure) ; `CONFIRMED → CANCELLED_*`. Un `NO_SHOW` incrémente `PatientRecord.noShowCount` ; à 3, suggestion de blocage.
+4. Statuts et transitions : `PENDING_VALIDATION → CONFIRMED | CANCELLED_BY_PRACTICE` ; `CONFIRMED → ARRIVED → IN_CONSULTATION → DONE` ; `CONFIRMED → NO_SHOW` (après l'heure, refusé avant par l’API et absent du tiroir, 23/11/2026) ; `CONFIRMED → CANCELLED_*`. Un `NO_SHOW` incrémente `PatientRecord.noShowCount` ; à 3, suggestion de blocage.
 5. Déplacement par le cabinet → SMS au patient ; annulation par le cabinet → SMS avec lien « reprendre rendez-vous ».
 6. Validation manuelle : si `requiresValidation`, les RDV en ligne arrivent `PENDING_VALIDATION`, le cabinet a 24 h (rappel), le patient reçoit « demande envoyée » puis « confirmé » / « refusé ».
 7. Les plages en ligne ne peuvent pas être réduites de façon à orpheliner des RDV existants sans affichage des RDV impactés.

@@ -179,7 +179,8 @@ export function AppointmentDrawer({ appointment, onClose, onChanged }: { appoint
           <section className="flex flex-col gap-2">
             <h3 className="text-sm font-bold">Statut</h3>
             <div className="flex flex-wrap gap-2">
-              {(NEXT_STATUSES[appointment.status] ?? []).map((s) => (
+              {/* « Non honoré » only once the time has passed: it counts against the patient (SPEC-05 §Règles 4). */}
+              {(NEXT_STATUSES[appointment.status] ?? []).filter((s) => s !== 'NO_SHOW' || new Date(appointment.startsAt) <= new Date()).map((s) => (
                 <Button key={s} variant={s === 'NO_SHOW' ? 'secondary' : 'ghost'} size="sm" disabled={busy} onClick={() => run(() => api(base, { method: 'PATCH', body: { status: s } }))} className="border border-border">
                   {STATUS_ACTION[s]}
                 </Button>
