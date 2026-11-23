@@ -24,7 +24,9 @@ Praticien prescripteur (médecin, dentiste, sage-femme selon leurs droits), pati
 - Vérification par QR : page publique minimale « Ordonnance valide, délivrée le …, prescripteur Dr … », sans détail médical tant que le pharmacien n'est pas connecté.
 
 ## Cycle de vie
-`DRAFT → SIGNED → SENT_TO_PHARMACY (optionnel) → PARTIALLY_DISPENSED | DISPENSED → EXPIRED (3 mois par défaut, 1 an si renouvelable) | CANCELLED`. Chaque dispensation (par renouvellement) est enregistrée par la pharmacie (date, pharmacie, lignes délivrées, substitution éventuelle) et visible par le prescripteur et le patient. Les traitements actifs du dossier (SPEC-13) sont mis à jour à la signature.
+`DRAFT → SIGNED → SENT_TO_PHARMACY (optionnel) → PARTIALLY_DISPENSED | DISPENSED → EXPIRED (3 mois par défaut, 1 an si renouvelable) | CANCELLED`. Chaque dispensation (par renouvellement) est enregistrée par la pharmacie (date, pharmacie, lignes délivrées, substitution éventuelle) et visible par le prescripteur et le patient.
+
+> **Réalisé le 22/11/2026 (RX-05, partie dispensation)** : la remise d’une commande faite sur ordonnance enregistre la dispensation (lignes délivrées, quantités, substitution) et fait passer l’ordonnance à `PARTIALLY_DISPENSED` ou `DISPENSED`. « Délivrée le … par … » et les médicaments remis apparaissent dans « Mes ordonnances », sur la fiche patient du praticien et dans le document de l’ordonnance (`apps/api/src/medical/dispensation-view.ts`). Les renouvellements restent à faire. Les traitements actifs du dossier (SPEC-13) sont mis à jour à la signature.
 
 ## Règles
 1. Seuls les praticiens `VERIFIED` avec droit de prescription (champ `canPrescribe` défini par spécialité, validé au back-office) peuvent signer.

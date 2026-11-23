@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, ArrowLeft, FileText, Lock, Pill, Plus, Stethoscope, Syringe } from 'lucide-react';
 import { Badge, Button, Card, CardTitle, cn } from '@twabibu/ui';
 import { formatDateLong, formatPhone } from '@twabibu/utils';
+import { fr } from '@twabibu/i18n';
+import { DispensationList } from '@/components/DispensationList';
 import { api, ApiError, errorMessage } from '@/lib/api-client';
 import { ageOf, HISTORY_LABEL, VITALS, type ConsultationDetail, type RecordSynthesis } from '@/lib/medical-types';
 import type { ProPatientOverview } from '@/lib/pro-types';
@@ -358,7 +360,10 @@ export function PatientFileView({ recordId }: { recordId: string }) {
               {s.prescriptions.map((p) => (
                 <li key={p.id} className="rounded-md border border-border px-3 py-2 text-sm">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-ink first-letter:uppercase">{p.signedAt ? formatDateLong(new Date(p.signedAt)) : 'Brouillon'}</span>
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium text-ink first-letter:uppercase">{p.signedAt ? formatDateLong(new Date(p.signedAt)) : 'Brouillon'}</span>
+                      {fr.pharmacy.prescriptionStatus[p.status] ? <Badge tone={p.status === 'DISPENSED' || p.status === 'PARTIALLY_DISPENSED' ? 'success' : 'info'}>{fr.pharmacy.prescriptionStatus[p.status]}</Badge> : null}
+                    </span>
                     <Link href={`/pro/ordonnance/${p.id}`} className="inline-flex items-center gap-1 text-primary hover:underline">
                       <FileText aria-hidden="true" size={14} /> Imprimer
                     </Link>
@@ -370,6 +375,9 @@ export function PatientFileView({ recordId }: { recordId: string }) {
                       </li>
                     ))}
                   </ul>
+                  <div className="mt-2">
+                    <DispensationList dispensations={p.dispensations} />
+                  </div>
                 </li>
               ))}
             </ul>

@@ -61,12 +61,13 @@ describe('Practitioner home and patient list (SPEC-05/06)', () => {
     const amina = await login(AMINA);
     const mine = (await amina.get(`/v1/pro/orgs/${orgId}/patients/list?scope=mine`).expect(200)).body;
     assert.ok(mine.total >= 8);
-    const ahmed = mine.items.find((p: { lastName: string }) => p.lastName === 'Mze');
-    assert.ok(ahmed.visits >= 3 && ahmed.lastVisitAt);
     const visits = mine.items.map((p: { lastVisitAt: string | null; nextAppointmentAt: string | null }) => p.lastVisitAt);
     assert.ok(visits.length > 0);
+    // Found by search, not on the first page: other tests and journeys keep adding patients to this practitioner.
     const found = (await amina.get(`/v1/pro/orgs/${orgId}/patients/list?scope=mine&q=mze`).expect(200)).body;
     assert.deepEqual(found.items.map((p: { lastName: string }) => p.lastName), ['Mze']);
+    const ahmed = found.items[0];
+    assert.ok(ahmed.visits >= 3 && ahmed.lastVisitAt);
     const all = (await amina.get(`/v1/pro/orgs/${orgId}/patients/list?scope=all`).expect(200)).body;
     assert.ok(all.total >= mine.total);
     await amina.get(`/v1/pro/orgs/${orgId}/patients/list?scope=everyone`).expect(400);

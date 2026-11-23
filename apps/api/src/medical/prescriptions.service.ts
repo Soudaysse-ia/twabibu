@@ -8,6 +8,7 @@ import { ApiException } from '../common/api-exception.js';
 import { sha256 } from '../common/crypto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { MembershipContext } from '../pro/permissions.js';
+import { dispensationViews } from './dispensation-view.js';
 import { allergyMatches, sharesComponent } from './drug-rules.js';
 import { MedicalAccessService } from './medical-access.service.js';
 
@@ -33,6 +34,9 @@ const QR_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 function qrCode(): string {
   return [...randomBytes(10)].map((b) => QR_ALPHABET[b % QR_ALPHABET.length]).join('');
 }
+
+/** How a prescription line is named everywhere outside the editor: reference drug with strength, or free text. */
+const lineLabel = (l: { drug: { dci: string; strength: string } | null; freeText: string | null }) => (l.drug ? `${l.drug.dci} ${l.drug.strength}` : (l.freeText ?? ''));
 
 const prescriptionInclude = {
   lines: { orderBy: { sortOrder: 'asc' }, include: { drug: true } },
@@ -191,9 +195,11 @@ export class PrescriptionsService {
         ? await this.prisma.patientProfile.findUnique({ where: { id: p.record.patientProfileId } })
         : await this.prisma.patientRecord.findUnique({ where: { id: p.record.patientRecordId ?? '' } });
     const practice = practitioner.practices[0]?.practice;
+    const dispensations = await dispensationViews(this.prisma, [{ id: p.id, lines: p.lines.map((l) => ({ id: l.id, label: lineLabel(l) })) }]);
     return {
       id: p.id,
       status: p.status,
+      dispensations: dispensations.get(p.id) ?? [],
       signedAt: p.signedAt?.toISOString() ?? null,
       expiresAt: p.expiresAt?.toISOString() ?? null,
       qrCode: p.qrCode,
@@ -256,6 +262,7 @@ export class PrescriptionsService {
     });
     const ids = [...new Set(list.map((p) => p.practitionerId))];
     const practitioners = await this.prisma.practitioner.findMany({ where: { id: { in: ids } } });
+    const dispensations = await dispensationViews(this.prisma, list.map((p) => ({ id: p.id, lines: p.lines.map((l) => ({ id: l.id, label: lineLabel(l) })) })));
     return list.map((p) => ({
       id: p.id,
       status: p.status,
@@ -263,7 +270,8 @@ export class PrescriptionsService {
       expiresAt: p.expiresAt?.toISOString() ?? null,
       qrCode: p.qrCode,
       prescriber: practitionerName(practitioners.find((x) => x.id === p.practitionerId) ?? { title: null, firstName: '', lastName: 'Soignant' }),
-      lines: p.lines.map((l) => ({ label: l.drug ? `${l.drug.dci} ${l.drug.strength}` : (l.freeText ?? ''), posologyText: l.posologyText })),
+      lines: p.lines.map((l) => ({ label: lineLabel(l), posologyText: l.posologyText })),
+      dispensations: dispensations.get(p.id) ?? [],
     }));
   }
 

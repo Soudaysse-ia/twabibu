@@ -7,6 +7,7 @@ import { FIELD_CRYPTO, FieldCrypto } from '../common/field-crypto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { MembershipContext } from '../pro/permissions.js';
 import { MedicalAccessService, type RecordContext } from './medical-access.service.js';
+import { dispensationViews } from './dispensation-view.js';
 
 export interface ConsultationSections {
   reason?: string;
@@ -61,6 +62,10 @@ export class MedicalService {
     const latest = new Map<VitalType, { value: number; measuredAt: string }>();
     for (const v of vitals) if (!latest.has(v.type)) latest.set(v.type, { value: v.value, measuredAt: v.measuredAt.toISOString() });
     const p = ctx.patientRecord;
+    const dispensations = await dispensationViews(
+      this.prisma,
+      prescriptions.map((x) => ({ id: x.id, lines: x.lines.map((l) => ({ id: l.id, label: l.drug ? `${l.drug.dci} ${l.drug.strength}` : (l.freeText ?? '') })) })),
+    );
 
     return {
       patient: {
@@ -101,6 +106,8 @@ export class MedicalService {
         signedAt: x.signedAt?.toISOString() ?? null,
         qrCode: x.qrCode,
         lines: x.lines.map((l) => ({ label: l.drug ? `${l.drug.dci} ${l.drug.strength} (${l.drug.form})` : (l.freeText ?? ''), posologyText: l.posologyText })),
+        // What the pharmacy handed over (RX-05): the prescriber sees whether the treatment was actually obtained.
+        dispensations: dispensations.get(x.id) ?? [],
       })),
     };
   }
