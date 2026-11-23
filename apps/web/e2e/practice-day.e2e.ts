@@ -115,6 +115,7 @@ test('P4 — la secrétaire prend un rendez-vous au téléphone, note l’arriv�
 
 test('P5 — une absence imprévue annule les rendez-vous touchés et prévient les patients', async ({
   page,
+  browser,
 }) => {
   await signInPro(page, DEMO.doctor);
   const { agenda, patient, base } = await practice(page.request);
@@ -171,6 +172,22 @@ test('P5 — une absence imprévue annule les rendez-vous touchés et prévient 
   expect(messages.some((m: { template: string }) => m.template === 'appointment.cancelled_by_practice')).toBe(
     true,
   );
+
+  // The e-mail offers other times; one click opens the booking on that time, already held for the patient.
+  const cancelMail = messages.find(
+    (m: { template: string }) => m.template === 'appointment.cancelled_by_practice',
+  );
+  const offered: string | undefined = cancelMail.text.match(/https?:\/\/\S+creneau=\S+/)?.[0];
+  expect(offered, 'a booking link with a time in the e-mail').toBeTruthy();
+  const patientContext = await browser.newContext();
+  const patientPage = await patientContext.newPage();
+  await patientPage.goto(offered!.replace(/^https?:\/\/[^/]+/, ''));
+  await expect(patientPage.getByText('Identifiez-vous pour confirmer')).toBeVisible();
+  const held = new URL(offered!).searchParams.get('creneau')!;
+  await patientPage.request.delete(
+    `/api/v1/booking/locks?agendaId=${agenda.id}&startsAt=${encodeURIComponent(held)}`,
+  );
+  await patientContext.close();
 
   // Clean-up: remove the absence.
   const list = await (await page.request.get(`${base}/agendas/${agenda.id}/absences`)).json();

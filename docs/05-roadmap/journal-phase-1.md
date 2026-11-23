@@ -473,4 +473,15 @@ Fin de QA-01 : les huit parcours de `personas-et-parcours.md` tournent en naviga
 Vérifié : 115 tests de l’API (règle et cas réel : refus avant l’heure, accepté après), 16 parcours Playwright dont les 2 nouveaux, passés deux fois de suite sur la même base.
 
 ## Écarts et limites
-- P5 décrit aussi « Proposer un autre créneau » aux patients touchés : pas encore fait (aujourd’hui : annuler et prévenir, ou garder les rendez-vous).
+- ~~P5 « Proposer un autre créneau »~~ : fait dans le lot suivant.
+
+# Vingt-sixième lot : proposer un autre créneau quand le cabinet annule (23 novembre 2026)
+
+Le dernier point de P5 : un patient dont le rendez-vous est annulé par le cabinet (absence, fermeture) devait chercher lui-même un nouvel horaire.
+
+## Fait
+- **E-mail d’annulation par le cabinet** (`appointmentCancelledByPractice`) : jusqu’à 3 prochains horaires libres en ligne, dans les 14 jours, avec le même soignant et le même motif ; chaque horaire ouvre la réservation avec ce créneau déjà choisi (`…/reserver?motif=…&creneau=…`), le bouton mène à toutes les disponibilités. Objet : « Votre rendez-vous est annulé : choisissez un autre horaire ».
+- Rien n’est proposé si le soignant ou le motif n’est pas réservable en ligne ; un échec du calcul n’empêche jamais l’envoi de l’annulation. Le SMS garde un lien court vers la fiche du soignant (160 caractères).
+- Calcul dans `AppointmentMessagesService` avec le moteur de disponibilités (`AvailabilityService`), donc sans créneau pendant l’absence qui vient d’être posée.
+
+Vérifié : 116 tests de l’API (modèle d’e-mail : horaires, liens échappés, texte ; cas réel : absence qui annule deux rendez-vous, un à 3 horaires proposés, aucun dans l’absence, lien vers la réservation du même motif) ; parcours P5 complété : le lien de l’e-mail ouvre la réservation sur l’horaire choisi, tenu pour le patient ; 16 parcours Playwright ; capture de l’e-mail à 375 px.
