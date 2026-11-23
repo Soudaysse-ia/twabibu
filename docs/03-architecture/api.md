@@ -30,6 +30,7 @@ Rôles (garde `@Roles()`): `public`, `patient`, `pro:practitioner`, `pro:secreta
 | Méthode | Route | Description |
 |---|---|---|
 | GET | `/practitioners/{slug}` | profil public complet (SSR) |
+| GET | `/search/sitemap` | plan du site (SEARCH-08) : pages « spécialité × localité » et « spécialité × île » ayant au moins un soignant public (avec leur nombre), adresses des profils publics ; même règle de visibilité que la recherche ; `Cache-Control: max-age=600` |
 | GET | `/practitioners/{id}/practices` | lieux |
 | GET | `/practitioners/{id}/motives?practiceId=` | motifs réservables en ligne |
 | GET | `/practitioners/{id}/availabilities?practiceId=&motiveId=&from=&to=` | créneaux par jour (max 14 jours par appel) |

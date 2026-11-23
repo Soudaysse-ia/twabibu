@@ -7,6 +7,7 @@ import { ApiErrorSchema, HealthSchema } from '@twabibu/contracts';
 import { createApp } from './bootstrap.js';
 import { secondsToNextWindow } from './common/rate-limit.js';
 import { loadConfig } from './config.js';
+import { PrismaService } from './prisma/prisma.service.js';
 import { RedisService } from './redis/redis.service.js';
 
 // Integration tests: need PostgreSQL (migrated + seeded) and Redis, as in .env.
@@ -61,6 +62,27 @@ describe('Twabibu API', () => {
     } finally {
       await clear();
     }
+  });
+
+  it('lists for search engines only pages with results and verified profiles (SEARCH-08)', async () => {
+    const server = app.getHttpServer();
+    const res = await request(server).get('/v1/search/sitemap').expect(200);
+    assert.match(String(res.headers['cache-control']), /max-age=600/);
+    const { pages, practitioners } = res.body as { pages: { url: string; count: number; kind: string }[]; practitioners: { url: string }[] };
+    assert.ok(pages.some((p) => p.url === '/medecin-generaliste/moroni' && p.kind === 'LOCALITY'));
+    assert.ok(pages.some((p) => p.url === '/medecin-generaliste/ngazidja' && p.kind === 'ISLAND'));
+    assert.ok(pages.every((p) => p.count >= 1));
+    // Each page says what the search finds for the same speciality and place.
+    for (const page of pages.slice(0, 6)) {
+      const [, q, ou] = page.url.split('/');
+      const search = await request(server).get(`/v1/search/practitioners?q=${q}&ou=${ou}`).expect(200);
+      assert.equal(search.body.total, page.count, page.url);
+    }
+    // Never a practitioner waiting for verification or unpublished.
+    const hidden = await app.get(PrismaService).practitioner.findMany({ where: { OR: [{ verificationStatus: { not: 'VERIFIED' } }, { isPublished: false }] }, select: { slug: true } });
+    const listed = new Set(practitioners.map((p) => p.url.split('/').pop()));
+    assert.ok(hidden.every((h) => !listed.has(h.slug)));
+    assert.ok(practitioners.some((p) => p.url.endsWith('/amina-said')));
   });
 
   it('serves the three islands and the seeded localities', async () => {

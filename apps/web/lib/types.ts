@@ -118,3 +118,9 @@ export interface AvailabilityDays {
   reason: string | null;
   days: { date: string; slots: { startsAt: string; endsAt: string }[] }[];
 }
+
+/** GET /v1/search/sitemap (SEARCH-08): « speciality × place » pages with results, and public profiles. */
+export interface SitemapData {
+  pages: { url: string; speciality: string; place: string; kind: 'LOCALITY' | 'ISLAND'; count: number }[];
+  practitioners: { url: string; updatedAt: string }[];
+}
