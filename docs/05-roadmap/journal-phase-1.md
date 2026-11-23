@@ -460,3 +460,14 @@ Vérifié : 113 tests de l’API (le test pharmacie vérifie la même délivranc
 ## Écarts et limites
 - Renouvellements d’ordonnance (plusieurs délivrances successives) : à faire avec le reste de RX-05.
 - Restent les parcours P4 (journée du secrétariat) et P5 (absence et rendez-vous touchés).
+
+# Vingt-septième lot : signaler un profil, file du back-office (23 novembre 2026)
+
+PROFILE-06 et ADMIN-07 : un visiteur qui trouve une information fausse (cabinet fermé, mauvais numéro) ou un faux soignant n’avait aucun moyen de le dire.
+
+## Fait
+- **Site** : lien « Signaler un problème avec ce profil » sur chaque fiche, page `/{spécialité}/{lieu}/{soignant}/signaler` : motif (5 choix), précisions facultatives (1 000 caractères, rappel « aucune information médicale », « le soignant ne saura pas qui a fait le signalement »), champ piège, confirmation annoncée.
+- **API** `POST /v1/practitioners/{slug}/reports` : profils publics seulement, 5 par minute et par adresse, auteur gardé seulement s’il est connecté ; modèle `Report` déjà présent, sans migration.
+- **Back-office** « Signalements » (vérification, support, super-admin) : file « À traiter / Traités », nombre de signalements ouverts sur le même profil, lien vers le profil public ; « Ignorer », « Écrire au soignant » (e-mail avec le motif seulement), « Retirer le profil du site » (confirmation, clôt les autres signalements du profil). Chaque décision va au journal d’audit.
+
+Vérifié : 119 tests de l’API (règles ; validation, piège, limite de débit, auteur ; droits par rôle ; e-mail au soignant sans l’auteur ni les précisions ; dépublication, profil plus signalable, décision impossible sur un signalement clos, journal d’audit) ; parcours Playwright « un visiteur signale, l’équipe ignore » ; captures du formulaire à 375 px et de la file à 1280 px.

@@ -14,7 +14,9 @@ describe('back-office roles', () => {
     assert.equal(canAccess(['FINANCE', 'SUPPORT'], 'audit'), false);
     assert.equal(canAccess(['SUPERADMIN'], 'flags'), true);
     assert.equal(canAccess([], 'dashboard'), false);
-    assert.deepEqual(areasFor(['SUPPORT']), ['dashboard', 'structures', 'patients', 'notifications']);
+    assert.deepEqual(areasFor(['SUPPORT']), ['dashboard', 'structures', 'patients', 'notifications', 'reports']);
+    assert.equal(canAccess(['VERIFIER'], 'reports'), true);
+    assert.equal(canAccess(['FINANCE'], 'reports'), false);
   });
 
   it('asks for the second factor again after 12 hours', () => {

@@ -3,9 +3,11 @@ import { ApiExcludeController } from '@nestjs/swagger';
 import { z } from 'zod';
 import { AuthGuard, CurrentUser } from '../auth/auth.guard.js';
 import type { AuthedRequest, SessionUser } from '../auth/auth.types.js';
+import { ReportDecisionSchema, type ReportDecision } from '@twabibu/contracts';
 import { ZodValidationPipe } from '../common/zod-validation.pipe.js';
 import { AdminAuthService } from './admin-auth.service.js';
 import { AdminPharmaciesService } from './admin-pharmacies.service.js';
+import { AdminReportsService } from './admin-reports.service.js';
 import { AdminReferentialsService } from './admin-referentials.service.js';
 import { AdminAreaRequired, AdminGuard, CurrentAdmin, type AdminContext } from './admin.guard.js';
 import { AdminService, CHECKLIST } from './admin.service.js';
@@ -97,7 +99,21 @@ export class AdminController {
   constructor(
     private readonly admin: AdminService,
     private readonly pharmacies: AdminPharmaciesService,
+    private readonly reports: AdminReportsService,
   ) {}
+
+  @Get('reports')
+  @AdminAreaRequired('reports')
+  reportQueue(@Query('scope') scope?: string) {
+    return this.reports.list(scope === 'closed' ? 'closed' : 'open');
+  }
+
+  @Post('reports/:id/decision')
+  @HttpCode(200)
+  @AdminAreaRequired('reports')
+  decideReport(@CurrentAdmin() a: AdminContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodValidationPipe(ReportDecisionSchema)) body: ReportDecision) {
+    return this.reports.decide(a, id, body);
+  }
 
   @Get('dashboard')
   dashboard() {

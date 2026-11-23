@@ -3,6 +3,7 @@ import { FIELD_CRYPTO, FieldCrypto } from '../common/field-crypto.js';
 import type { AppConfig } from '../config.js';
 import { AdminAuthService } from './admin-auth.service.js';
 import { AdminPharmaciesService } from './admin-pharmacies.service.js';
+import { AdminReportsService } from './admin-reports.service.js';
 import { AdminReferentialsService } from './admin-referentials.service.js';
 import { AdminAuthController, AdminController, AdminReferentialsController } from './admin.controller.js';
 import { AdminGuard } from './admin.guard.js';
@@ -16,7 +17,7 @@ export class AdminModule {
     return {
       module: AdminModule,
       controllers: [AdminAuthController, AdminController, AdminReferentialsController],
-      providers: [{ provide: FIELD_CRYPTO, useValue: new FieldCrypto(config.ENCRYPTION_KEY) }, AdminAuthService, AdminService, AdminPharmaciesService, AdminReferentialsService, AuditService, AdminGuard],
+      providers: [{ provide: FIELD_CRYPTO, useValue: new FieldCrypto(config.ENCRYPTION_KEY) }, AdminAuthService, AdminService, AdminPharmaciesService, AdminReferentialsService, AdminReportsService, AuditService, AdminGuard],
     };
   }
 }
