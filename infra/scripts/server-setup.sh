@@ -52,10 +52,11 @@ ufw --force enable
 echo "== Application folder"
 install -d -m 750 -o deploy -g deploy /srv/twabibu /srv/twabibu/scripts /srv/twabibu/certs /srv/twabibu/backups
 
-echo "== Scheduled tasks: daily backup 02:30 UTC, restore test on the 1st of each month"
+echo "== Scheduled tasks: daily backup 02:30 UTC, restore test on the 1st of each month, watch every 5 minutes"
 cat > /etc/cron.d/twabibu <<'CRON'
 30 2 * * * deploy /srv/twabibu/scripts/backup.sh >> /srv/twabibu/backups/backup.log 2>&1
 0 4 1 * * deploy f=$(ls -1t /srv/twabibu/backups/twabibu-*.dump | head -1) && /srv/twabibu/scripts/restore.sh --test "$f" >> /srv/twabibu/backups/restore-test.log 2>&1
+*/5 * * * * deploy [ -x /srv/twabibu/scripts/watch.sh ] && /srv/twabibu/scripts/watch.sh >> /srv/twabibu/backups/watch.log 2>&1
 CRON
 
 echo
