@@ -15,7 +15,7 @@ describe('Configuration (ADR-020)', () => {
     assert.equal(loadConfig({ ...base, ...secrets, NODE_ENV: 'production', APP_ENV: 'staging', EMAIL_PROVIDER: 'fake' }).APP_ENV, 'staging');
     assert.throws(() => loadConfig({ ...base, ...secrets, NODE_ENV: 'production', APP_ENV: 'production', EMAIL_PROVIDER: 'fake' }), /EMAIL_PROVIDER=fake/);
     const prod = loadConfig({ ...base, ...secrets, NODE_ENV: 'production', APP_ENV: 'production', EMAIL_PROVIDER: 'brevo', EMAIL_API_KEY: 'key' });
-    assert.equal(prod.SMS_PROVIDER, 'fake', 'SMS has no real provider yet and stays a logged fallback');
+    assert.equal(prod.SMS_PROVIDER, 'fake', 'SMS is only a fallback: production may start without a provider');
   });
 
   it('still requires real secrets in any production build', () => {

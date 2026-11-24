@@ -58,5 +58,7 @@ Job `reminder-scheduler` toutes les 15 min : sélectionne les RDV `CONFIRMED` do
 - Lien de confirmation : jeton signé (HMAC du secret serveur, lié à l’horaire), page `/rendez-vous/{id}/confirmer` ; la confirmation se fait par un bouton (POST), jamais à l’ouverture du lien (les antivirus de messagerie ouvrent les liens). Aucun motif sur cette page.
 - Un patient avec compte peut couper les rappels (« Mes rendez-vous » › Rappels) ; c’est respecté aussi pour les RDV pris par le cabinet, via sa fiche patient.
 
+> **Réalisé le 24/11/2026 (NOTIF-02, partiel)** : fournisseurs SMS Twilio et Infobip choisis par `SMS_PROVIDER`, réglages vérifiés au démarrage (clé, compte Twilio `AC…`, adresse Infobip `*.api.infobip.com`, expéditeur), délai maximal de 10 s par envoi (BullMQ refait la tentative), message refusé par Infobip dans une réponse 200 traité comme un échec, numéros masqués dans les erreurs gardées. Pas encore d’accusés de réception (webhooks DLR) ni de bascule SMS → e-mail.
+
 ## Tickets
 NOTIF-01 module + file BullMQ + modèle `Notification` · NOTIF-02 providers SMS (fake, Twilio/Infobip) + webhooks · NOTIF-03 modèles SMS/e-mail + liens courts · NOTIF-04 abonnés aux événements (booked, cancelled, rescheduled…) · NOTIF-05 planificateur de rappels + fenêtre horaire · NOTIF-06 préférences + STOP + quotas · NOTIF-07 journal admin/cabinet + renvoi · NOTIF-08 tests.

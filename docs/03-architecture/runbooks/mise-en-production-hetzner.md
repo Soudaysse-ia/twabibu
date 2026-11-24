@@ -53,6 +53,13 @@ Générez chaque secret avec `openssl rand -hex 32` (`POSTGRES_PASSWORD`, `SESSI
 
 En production, renseignez aussi `EMAIL_PROVIDER=brevo`, `EMAIL_API_KEY` (clé Brevo) et `ADMIN_ALLOWED_IPS` (adresses du bureau qui ont accès au back-office). L’API refuse de démarrer en production avec de faux e-mails.
 
+**SMS (facultatif au démarrage).** Ils ne servent qu’aux patients inscrits par le cabinet sans adresse e-mail ; tant que `SMS_PROVIDER=fake`, ces messages sont seulement journalisés. Pour en envoyer de vrais :
+- **Infobip** : `SMS_PROVIDER=infobip`, `SMS_API_KEY` (clé d’API), `SMS_BASE_URL` (l’adresse propre au compte, `xxxxx.api.infobip.com`, visible sur la page d’accueil du portail Infobip).
+- **Twilio** : `SMS_PROVIDER=twilio`, `SMS_ACCOUNT_SID` (`AC…`) et `SMS_API_KEY` (le jeton d’authentification du compte).
+- Dans les deux cas, `SMS_FROM` : « Twabibu » si l’expéditeur alphanumérique est accepté vers les Comores, sinon le numéro attribué par le fournisseur (`+…`). Vérifiez-le auprès du fournisseur avant le lancement.
+
+L’API refuse de démarrer si un réglage manque ou si l’adresse Infobip n’est pas une adresse `api.infobip.com`. Faites un premier essai sur votre propre numéro : dans un cabinet de test, créez un patient sans e-mail avec ce numéro, puis un rendez-vous ; le SMS de confirmation doit arriver. La page de messages de développement (`/v1/dev/messages`) est désactivée dès qu’un vrai fournisseur est configuré.
+
 ## 5. Noms de domaine (Cloudflare)
 Enregistrements `A` (et `AAAA` pour l’IPv6) vers l’IP du serveur :
 | Nom | Pré-production | Production |
