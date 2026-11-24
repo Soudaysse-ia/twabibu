@@ -54,3 +54,18 @@ export function normaliseReminderSettings(input: { reminderOffsetsHours: number[
   if (!Number.isInteger(input.reminderHour) || input.reminderHour < REMINDER_HOUR_MIN || input.reminderHour > REMINDER_HOUR_MAX) return null;
   return { reminderOffsetsHours: offsets, reminderHour: input.reminderHour };
 }
+
+/** Manual validation (SPEC-05 §Règles 6): the practice has 24 h to answer an online request, then it is reminded. */
+export const VALIDATION_REMINDER_AFTER_HOURS = 24;
+
+/**
+ * Reminder to the practice for an online request still waiting for its answer. SKIP once the appointment time has
+ * passed (nothing left to decide); WAIT before 24 h, or during quiet hours (the next run sends it).
+ */
+export function validationReminderDecision(input: { createdAt: Date; startsAt: Date; now: Date }): ReminderDecision {
+  const { createdAt, startsAt, now } = input;
+  if (startsAt <= now) return 'SKIP';
+  if (now.getTime() - createdAt.getTime() < VALIDATION_REMINDER_AFTER_HOURS * 3_600_000) return 'WAIT';
+  if (!isWithinSendWindow(now)) return 'WAIT';
+  return 'SEND';
+}

@@ -460,3 +460,14 @@ Vérifié : 113 tests de l’API (le test pharmacie vérifie la même délivranc
 ## Écarts et limites
 - Renouvellements d’ordonnance (plusieurs délivrances successives) : à faire avec le reste de RX-05.
 - Restent les parcours P4 (journée du secrétariat) et P5 (absence et rendez-vous touchés).
+
+# Vingt-quatrième lot : rappel au cabinet des demandes sans réponse (23 novembre 2026)
+
+Fin d’AGENDA-07 (SPEC-05 §Règles 6) : en validation manuelle, une demande restée sans réponse laissait le patient sans nouvelles.
+
+## Fait
+- **Règle** `validationReminderDecision` (`apps/api/src/notifications/reminder-rules.ts`) : rappel quand la demande attend depuis 24 h, seulement entre 07:00 et 21:00, plus rien une fois l’heure du rendez-vous passée.
+- **Envoi** (`RemindersService.runValidationReminders`, appelé par la tâche `reminder-scheduler` toutes les 15 min) : un e-mail au praticien de l’agenda, au titulaire et aux administrateurs, jamais à la secrétaire ni au patient ; lien direct vers la demande (`/pro/app/agenda?rdv=…`), aucune donnée patient. Une seule fois : le journal des notifications garde la trace, un verrou Redis empêche deux exécutions simultanées d’envoyer deux fois. Pas de changement du schéma `Appointment`.
+- Article d’aide « Valider les demandes de rendez-vous » complété.
+
+Vérifié : 116 tests de l’API, dont 1 règle (horloge simulée : avant 24 h, nuit, après l’heure du rendez-vous) et 1 test d’intégration (destinataires, deux exécutions simultanées, une seule fois, rien pour une demande déjà acceptée, pas de nom du patient dans l’e-mail).
