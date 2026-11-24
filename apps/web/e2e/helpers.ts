@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { resetCodeLimit } from './global-setup';
 
 export { DEMO } from './global-setup';
 
@@ -7,6 +8,7 @@ export const newEmail = (who: string) => `${who}-${Date.now()}-${Math.floor(Math
 
 /** E-mail + code form (ADR-016), wherever it appears: sign-in page, booking funnel, Pro and Pharma sign-in. */
 export async function enterEmailAndCode(page: Page, email: string) {
+  await resetCodeLimit(email);
   await page.getByLabel('Adresse e-mail').fill(email);
   await page.getByRole('button', { name: 'Recevoir un code par e-mail' }).click();
   await page.getByLabel('Code reçu par e-mail').fill('000000');
