@@ -152,6 +152,9 @@ describe('Practice space', () => {
     assert.equal(arrived.status, 'ARRIVED');
     assert.equal((await secretary.patch(`/v1/pro/orgs/${orgId}/appointments/${appt.id}`).send({ status: 'NO_SHOW' }).expect(409)).body.code, 'CONFLICT');
     await secretary.patch(`/v1/pro/orgs/${orgId}/appointments/${appt.id}`).send({ status: 'CONFIRMED' }).expect(200);
+    // Not before the appointment time: a no-show counts against the patient (SPEC-05 §Règles 4).
+    assert.equal((await secretary.patch(`/v1/pro/orgs/${orgId}/appointments/${appt.id}`).send({ status: 'NO_SHOW' }).expect(409)).body.code, 'CONFLICT');
+    await prisma.appointment.update({ where: { id: appt.id }, data: { startsAt: new Date(Date.now() - 400 * 86_400_000), endsAt: new Date(Date.now() - 400 * 86_400_000 + 1_800_000) } }); // far from the demo history
     const noShow = (await secretary.patch(`/v1/pro/orgs/${orgId}/appointments/${appt.id}`).send({ status: 'NO_SHOW' }).expect(200)).body;
     assert.equal(noShow.patient.noShowCount, 1);
     const back = (await secretary.patch(`/v1/pro/orgs/${orgId}/appointments/${appt.id}`).send({ status: 'CONFIRMED' }).expect(200)).body;
@@ -250,17 +253,28 @@ describe('Practice space', () => {
     const appt = (await amina.post(`/v1/pro/orgs/${orgId}/appointments`).send({ agendaId: agenda.id, motiveId: agenda.motives[0].id, startsAt: at(16), newPatient: { firstName: 'Absence', lastName: 'Test', phone }, notifyPatient: false }).expect(201)).body;
     created.appointments.push(appt.id);
     created.records.push(appt.patient.id);
+    const mail = `absence-${Date.now()}@exemple.km`;
+    const byMail = (await amina.post(`/v1/pro/orgs/${orgId}/appointments`).send({ agendaId: agenda.id, motiveId: agenda.motives[0].id, startsAt: at(17), newPatient: { firstName: 'Absence', lastName: 'Courriel', email: mail }, notifyPatient: false }).expect(201)).body;
+    created.appointments.push(byMail.id);
+    created.records.push(byMail.patient.id);
 
     const range = { startsAt: at(15, 30), endsAt: at(18) };
     const preview = (await amina.post(`/v1/pro/orgs/${orgId}/agendas/${agenda.id}/absences/preview`).send(range).expect(200)).body;
-    assert.deepEqual(preview.map((p: { id: string }) => p.id), [appt.id]);
+    assert.deepEqual(preview.map((p: { id: string }) => p.id).sort(), [appt.id, byMail.id].sort());
 
     const absence = (await amina.post(`/v1/pro/orgs/${orgId}/agendas/${agenda.id}/absences`).send({ ...range, reason: 'Formation', impacted: 'CANCEL_AND_NOTIFY' }).expect(201)).body;
     created.absences.push(absence.id);
-    assert.equal(absence.cancelled, 1);
+    assert.equal(absence.cancelled, 2);
     const after = await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } });
     assert.equal(after.status, 'CANCELLED_BY_PRACTICE');
     assert.ok(await prisma.notification.findFirst({ where: { recipient: phone, template: 'appointment.cancelled_by_practice' } }));
+    // By e-mail, other free times are offered (P5), each opening the booking with that time chosen, never inside the absence.
+    const offer = await prisma.notification.findFirstOrThrow({ where: { recipient: mail, template: 'appointment.cancelled_by_practice' } });
+    const html = (offer.payload as { html: string }).html;
+    const offered = [...html.matchAll(/creneau=([^"&]+)/g)].map((m) => new Date(decodeURIComponent(m[1]!)));
+    assert.ok(offered.length >= 1 && offered.length <= 3, `${offered.length} times offered`);
+    assert.ok(html.includes(`/reserver?motif=${agenda.motives[0].id}`));
+    assert.ok(offered.every((t) => t < new Date(range.startsAt) || t >= new Date(range.endsAt)), 'no time inside the absence');
 
     // The practice cannot book during an absence without forcing.
     const blocked = await amina.post(`/v1/pro/orgs/${orgId}/appointments`).send({ agendaId: agenda.id, motiveId: agenda.motives[0].id, startsAt: at(16), patientRecordId: appt.patient.id, notifyPatient: false }).expect(409);

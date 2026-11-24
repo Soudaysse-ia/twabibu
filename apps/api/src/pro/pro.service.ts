@@ -8,7 +8,7 @@ import { practitionerName } from '../booking/appointment-view.js';
 import { ApiException } from '../common/api-exception.js';
 import { AppointmentMessagesService } from '../notifications/appointment-messages.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { canForceOverlap, canTransition, canViewAgenda, type MembershipContext } from './permissions.js';
+import { canForceOverlap, canMarkNoShow, canTransition, canViewAgenda, type MembershipContext } from './permissions.js';
 
 const TZ = 'Indian/Comoro';
 
@@ -279,6 +279,7 @@ export class ProService {
 
     if (input.status && input.status !== a.status) {
       if (!canTransition(a.status, input.status)) throw new ApiException('CONFLICT', `Cannot go from ${a.status} to ${input.status}`);
+      if (input.status === 'NO_SHOW' && !canMarkNoShow(a.startsAt, new Date())) throw new ApiException('CONFLICT', 'A no-show is recorded once the appointment time has passed');
       data.status = input.status as Prisma.AppointmentUpdateInput['status'];
       events.push({ type: 'STATUS_CHANGED', actorUserId: user.id, payload: { from: a.status, to: input.status } });
       // No-show counter on the patient file (SPEC-05 §Règles 4).

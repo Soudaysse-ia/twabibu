@@ -32,5 +32,6 @@ export class RemindersProcessor extends WorkerHost implements OnModuleInit {
 
   async process(): Promise<void> {
     await this.reminders.runDue();
+    await this.reminders.runValidationReminders();
   }
 }
