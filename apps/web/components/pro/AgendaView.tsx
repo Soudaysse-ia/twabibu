@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Globe, Phone, Plus, Store } from 'lucide-react';
-import { Button, cn } from '@twabibu/ui';
+import { ChevronLeft, ChevronRight, Globe, Phone, Plus, Printer, Store } from 'lucide-react';
+import { fr } from '@twabibu/i18n';
+import { Button, ButtonLink, cn } from '@twabibu/ui';
 import {
   addDaysToDateKey,
   formatDateLong,
@@ -264,6 +265,14 @@ export function AgendaView() {
             </button>
           ))}
         </div>
+        <ButtonLink
+          variant="secondary"
+          size="sm"
+          href={`/pro/agenda/imprimer?date=${date}&agendas=${selected.join(',')}`}
+          aria-label={fr.agendaPrint.button}
+        >
+          <Printer aria-hidden="true" size={16} /> <span className="hidden sm:inline">{fr.agendaPrint.button}</span>
+        </ButtonLink>
         <Button
           size="sm"
           onClick={() =>
