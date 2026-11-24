@@ -6,4 +6,5 @@ export * from './availability.js';
 export * from './auth.js';
 export * from './contact.js';
 export * from './team.js';
+export * from './profile.js';
 export * from './reference/index.js';

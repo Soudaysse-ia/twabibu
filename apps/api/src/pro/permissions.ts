@@ -49,6 +49,12 @@ export function canManageAgendaSettings(m: MembershipContext, agenda: AgendaRef)
   return false;
 }
 
+/** Public profile (SPEC-07 §Rôles « Profil public ») : the practitioner their own, managers every practitioner of the practice. */
+export function canEditProfile(m: MembershipContext, practitionerId: string): boolean {
+  if (isManager(m)) return true;
+  return m.role === 'PRACTITIONER' && m.practitionerId === practitionerId;
+}
+
 export function canForceOverlap(m: MembershipContext): boolean {
   if (isManager(m) || m.role === 'PRACTITIONER') return true;
   return m.role === 'SECRETARY' && !!m.permissions.forceOverlap;

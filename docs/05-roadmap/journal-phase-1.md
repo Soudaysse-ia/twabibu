@@ -460,3 +460,20 @@ Vérifié : 113 tests de l’API (le test pharmacie vérifie la même délivranc
 ## Écarts et limites
 - Renouvellements d’ordonnance (plusieurs délivrances successives) : à faire avec le reste de RX-05.
 - Restent les parcours P4 (journée du secrétariat) et P5 (absence et rendez-vous touchés).
+
+# Vingt-huitième lot : le praticien écrit son profil public (24 novembre 2026)
+
+PRO-07, sans les photos. Jusqu’ici, la présentation, les langues ou les moyens de paiement d’un soignant ne pouvaient venir que du jeu de démonstration : un praticien inscrit en ligne avait une page publique vide qu’il ne pouvait pas compléter.
+
+## Fait
+- **API** : `GET /v1/pro/orgs/{orgId}/profiles` et `PUT …/profiles/{practitionerId}`. Droits (`canEditProfile`) : le praticien pour lui-même, titulaire et administrateurs pour tous les praticiens du cabinet, jamais la secrétaire ; un praticien d’un autre cabinet est introuvable. Langues et assurances vérifiées contre les référentiels ; texte nettoyé (espaces, doublons d’expertise, présentation vide) dans `apps/api/src/pro/profile-rules.ts` ; nom, spécialité et numéro d’autorisation jamais écrits. Un enregistrement qui ne change rien n’écrit rien ; sinon une ligne de journal avec les noms des champs modifiés.
+- **Twabibu Pro** : page « Profil public » (lien « Modifier le profil public » dans les réglages, sauf pour le secrétariat) : informations vérifiées en lecture seule avec un lien vers le contact, présentation avec compteur, expertises en étiquettes, cases pour les langues, paiements et assurances, diplômes en lignes, lien vers les tarifs des motifs et vers la page publique si elle est en ligne. Textes dans `packages/i18n` (`fr.profileEdit`).
+- **Page publique** : nouvelle rubrique « Formations » ; les expertises s’affichent même sans présentation.
+
+Vérifié : 120 tests de l’API, dont 6 nouveaux (`apps/api/src/profile.test.ts` : règles, droits de chaque rôle, autre cabinet, choix inconnus, diplôme futur, enregistrement visible aussitôt sur le profil public, journal) ; 15 parcours Playwright, dont un nouveau (`apps/web/e2e/pro-profile.e2e.ts` : la praticienne ajoute une expertise et un diplôme, les voit sur sa page, puis les retire) ; captures à 375 px et 1280 px.
+
+## Écarts et limites
+- Pas de photo du soignant ni du cabinet : il faut d’abord le stockage chiffré des fichiers (même besoin que le dépôt des pièces justificatives, PRO-03).
+- Pas de rubrique « Expérience » (le champ existe en base, rien ne l’affiche encore).
+- Les champs de saisie de Twabibu Pro hors de cette page restent en 14 px sur mobile ; ceux de cette page passent à 16 px comme le demande la charte.
+

@@ -74,6 +74,7 @@ export interface Profile {
   expertises: string[];
   paymentMethods: string[];
   insurances: string[];
+  educations: { year: number; diploma: string; school: string }[];
   organization: { name: string; slug: string; type: string; phone: string | null };
   practices: Practice[];
   agenda: {
