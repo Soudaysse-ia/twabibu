@@ -53,6 +53,11 @@ function appointmentEmail(subject: string, title: string, intro: string, d: Appo
   };
 }
 
+export interface CancelledEmailData extends AppointmentEmailData {
+  /** Next free times with the same practitioner and motive, each a booking link with the time preselected. */
+  alternatives?: { startsAt: Date; url: string }[];
+}
+
 export interface ReminderEmailData extends AppointmentEmailData {
   /** Present when the practice asks patients to confirm they will come. */
   confirmUrl?: string;
@@ -88,8 +93,33 @@ export const emailTemplates = {
   appointmentRescheduled: (d: AppointmentEmailData) =>
     appointmentEmail(`Rendez-vous déplacé au ${formatDateLong(d.startsAt)}`, 'Votre rendez-vous a été déplacé', 'Le cabinet a déplacé votre rendez-vous. Nouvelle date :', d, 'Si cet horaire ne vous convient pas, contactez le cabinet.', 'Voir mon rendez-vous'),
 
-  appointmentCancelledByPractice: (d: AppointmentEmailData) =>
-    appointmentEmail('Votre rendez-vous est annulé', 'Le cabinet a annulé votre rendez-vous', 'Nous sommes désolés : le cabinet a dû annuler ce rendez-vous :', d, 'Vous pouvez reprendre rendez-vous en ligne.', 'Reprendre rendez-vous'),
+  /**
+   * The practice cancelled (absence, closure…). When the practitioner books online, the next free times for the same
+   * motive are offered, each opening the booking with that time already chosen (P5 « Proposer un autre créneau »).
+   */
+  appointmentCancelledByPractice: (d: CancelledEmailData): RenderedEmail => {
+    const alternatives = d.alternatives ?? [];
+    if (!alternatives.length) {
+      return appointmentEmail('Votre rendez-vous est annulé', 'Le cabinet a annulé votre rendez-vous', 'Nous sommes désolés : le cabinet a dû annuler ce rendez-vous :', d, 'Vous pouvez reprendre rendez-vous en ligne.', 'Reprendre rendez-vous');
+    }
+    const offer = 'Ce soignant peut vous recevoir à l’un de ces horaires, il suffit d’en choisir un :';
+    const links = alternatives.map((s) => `<a href="${esc(s.url)}" style="color:#2A6BCB;font-weight:bold">${esc(when(s.startsAt))}</a>`).join('<br>');
+    return {
+      subject: 'Votre rendez-vous est annulé : choisissez un autre horaire',
+      text: `Bonjour ${d.firstName},\n\nNous sommes désolés : le cabinet a dû annuler ce rendez-vous :\n\n${when(d.startsAt)}\n${d.practitionerName}\n${d.address}\n\n${offer}\n${alternatives.map((s) => `- ${when(s.startsAt)} : ${s.url}`).join('\n')}\n\nToutes les disponibilités : ${d.manageUrl}\n\nTwabibu, à vos côtés dans chaque temps de soin.`,
+      html: layout(
+        'Le cabinet a annulé votre rendez-vous',
+        [
+          `Bonjour ${esc(d.firstName)},`,
+          'Nous sommes désolés : le cabinet a dû annuler ce rendez-vous :',
+          `<strong style="color:#0B2A5B">${when(d.startsAt)}<br>${esc(d.practitionerName)}<br>${esc(d.address)}</strong>`,
+          esc(offer),
+          links,
+        ],
+        { label: 'Voir toutes les disponibilités', url: d.manageUrl },
+      ),
+    };
+  },
 
   appointmentCancelledByPatient: (d: AppointmentEmailData) =>
     appointmentEmail('Annulation confirmée', 'Votre rendez-vous est annulé', 'Nous confirmons l’annulation de ce rendez-vous :', d, 'Le créneau a été libéré pour un autre patient.', 'Reprendre rendez-vous'),
@@ -200,6 +230,37 @@ export const emailTemplates = {
         'Vous ne connaissez pas ce cabinet ? Ignorez ce message.',
       ],
       { label: 'Rejoindre l’équipe', url: d.url },
+    ),
+  }),
+
+  /** To a practitioner whose public profile was reported (ADMIN-07): what to check, never who reported it. */
+  profileReportNotice: (d: { name: string; reasonLabel: string; url: string }): RenderedEmail => ({
+    subject: 'Une information de votre profil Twabibu est à vérifier',
+    text: `Bonjour ${d.name},\n\nUn visiteur nous a signalé un point à vérifier sur votre profil public : « ${d.reasonLabel} ».\n\nMerci de relire votre profil et de le mettre à jour si nécessaire, ou de répondre à l’équipe Twabibu depuis le formulaire de contact :\n${d.url}\n\nTwabibu, à vos côtés dans chaque temps de soin.`,
+    html: layout(
+      'Une information est à vérifier',
+      [
+        `Bonjour ${esc(d.name)},`,
+        `Un visiteur nous a signalé un point à vérifier sur votre profil public : <strong style="color:#0B2A5B">« ${esc(d.reasonLabel)} »</strong>.`,
+        'Merci de relire votre profil et de le mettre à jour si nécessaire, ou de répondre à l’équipe Twabibu depuis le formulaire de contact.',
+      ],
+      { label: 'Ouvrir Twabibu Pro', url: d.url },
+    ),
+  }),
+
+  /** To the practice: an online request still waits for its answer after 24 h (SPEC-05 §Règles 6). No patient data. */
+  validationReminder: (d: { practitionerName: string; startsAt: Date; url: string }): RenderedEmail => ({
+    subject: 'Une demande de rendez-vous attend votre réponse',
+    text: `Bonjour,\n\nUne demande de rendez-vous en ligne attend votre réponse depuis plus de 24 heures :\n${when(d.startsAt)} avec ${d.practitionerName}.\n\nAcceptez-la ou refusez-la pour que le patient soit prévenu :\n${d.url}\n\nTwabibu, à vos côtés dans chaque temps de soin.`,
+    html: layout(
+      'Une demande attend votre réponse',
+      [
+        'Bonjour,',
+        'Une demande de rendez-vous en ligne attend votre réponse depuis plus de 24 heures :',
+        `<strong style="color:#0B2A5B">${esc(when(d.startsAt))}</strong><br>avec ${esc(d.practitionerName)}`,
+        'Acceptez-la ou refusez-la pour que le patient soit prévenu.',
+      ],
+      { label: 'Répondre à la demande', url: d.url },
     ),
   }),
 

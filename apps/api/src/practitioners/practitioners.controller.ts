@@ -1,7 +1,7 @@
-import { Controller, Get, Header, Param, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, HttpCode, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
-import { dateKeySchema } from '@twabibu/contracts';
+import { dateKeySchema, ProfileReportSchema, type ProfileReport } from '@twabibu/contracts';
 import { addDaysToDateKey } from '@twabibu/utils';
 import { sessionFromRequest } from '../auth/auth.guard.js';
 import { AuthService } from '../auth/auth.service.js';
@@ -61,6 +61,17 @@ export class PractitionersController {
   profile(@Param('slug') slug: string) {
     if (!/^[a-z0-9-]{1,120}$/.test(slug)) throw new ApiException('NOT_FOUND', 'Practitioner not found');
     return this.practitioners.profile(slug);
+  }
+
+  @Post('practitioners/:slug/reports')
+  @HttpCode(202)
+  @RateLimit('report')
+  @ApiOperation({ summary: 'Signale un problème sur le profil public d’un soignant (traité dans le back-office).' })
+  async report(@Param('slug') slug: string, @Body(new ZodValidationPipe(ProfileReportSchema)) body: ProfileReport, @Req() req: AuthedRequest) {
+    if (!/^[a-z0-9-]{1,120}$/.test(slug)) throw new ApiException('NOT_FOUND', 'Practitioner not found');
+    const user = await sessionFromRequest(this.auth, req);
+    await this.practitioners.report(slug, body, user?.id ?? null);
+    return { status: 'RECEIVED' };
   }
 
   @Get('practitioners/:slug/availabilities')

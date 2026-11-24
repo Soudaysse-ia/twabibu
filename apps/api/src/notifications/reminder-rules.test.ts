@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { isWithinSendWindow, normaliseReminderSettings, reminderDecision, reminderDueAt } from './reminder-rules.js';
+import { isWithinSendWindow, normaliseReminderSettings, reminderDecision, reminderDueAt, validationReminderDecision } from './reminder-rules.js';
 
 // Comoros = UTC+3, no daylight saving. 2026-11-13 is a Friday.
 const at = (iso: string) => new Date(iso);
@@ -42,5 +42,15 @@ describe('appointment reminders', () => {
     assert.equal(normaliseReminderSettings({ reminderOffsetsHours: [2], reminderHour: 17 }), null);
     assert.equal(normaliseReminderSettings({ reminderOffsetsHours: [24], reminderHour: 21 }), null);
     assert.equal(normaliseReminderSettings({ reminderOffsetsHours: [24], reminderHour: 6 }), null);
+  });
+
+  it('reminds the practice of an online request left unanswered for 24 h, by day only', () => {
+    const createdAt = new Date('2026-11-23T07:00:00Z'); // 10:00 in Moroni
+    const startsAt = new Date('2026-11-30T07:00:00Z');
+    const at = (iso: string) => validationReminderDecision({ createdAt, startsAt, now: new Date(iso) });
+    assert.equal(at('2026-11-24T06:59:00Z'), 'WAIT', 'not before 24 h');
+    assert.equal(at('2026-11-24T07:00:00Z'), 'SEND');
+    assert.equal(at('2026-11-24T19:00:00Z'), 'WAIT', '22:00 in Moroni: quiet hours');
+    assert.equal(at('2026-11-30T07:00:00Z'), 'SKIP', 'the appointment time has come: nothing left to decide');
   });
 });

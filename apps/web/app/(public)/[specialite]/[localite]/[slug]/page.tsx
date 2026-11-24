@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
-import { Accessibility, BadgeCheck, CalendarCheck, Clock, GraduationCap, Landmark, Languages, MapPin, Phone, UserRound, Wallet } from 'lucide-react';
+import { Accessibility, BadgeCheck, CalendarCheck, Clock, Flag, GraduationCap, Landmark, Languages, MapPin, Phone, UserRound, Wallet } from 'lucide-react';
+import { fr } from '@twabibu/i18n';
 import { Badge, buttonClasses, Card, CardTitle, Container } from '@twabibu/ui';
 import { formatKmf, formatPhone } from '@twabibu/utils';
 import { apiGet } from '@/lib/api-server';
@@ -203,6 +204,9 @@ export default async function PractitionerPage({ params }: { params: Promise<Par
             <CardTitle as="h2" icon={<Landmark aria-hidden="true" size={16} />}>Établissement</CardTitle>
             <p className="text-text">{p.organization.name}</p>
           </Card>
+          <Link href={`${p.url}/signaler`} className="inline-flex min-h-11 items-center gap-2 self-start text-sm text-text-muted hover:text-primary hover:underline">
+            <Flag aria-hidden="true" size={14} /> {fr.report.link}
+          </Link>
         </div>
 
         <aside className="lg:sticky lg:top-24 lg:self-start">

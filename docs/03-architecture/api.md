@@ -36,7 +36,7 @@ Rôles (garde `@Roles()`): `public`, `patient`, `pro:practitioner`, `pro:secreta
 | GET | `/practitioners/{id}/availabilities?practiceId=&motiveId=&from=&to=` | créneaux par jour (max 14 jours par appel) |
 | GET | `/practitioners/{id}/next-availability?motiveId=` | première disponibilité |
 | GET | `/organizations/{slug}` | page établissement |
-| POST | `/practitioners/{id}/reports` | signaler un profil |
+| POST | `/practitioners/{slug}/reports` | signaler un profil public : `{ reason: WRONG_INFO \| CLOSED \| NOT_A_PRACTITIONER \| BEHAVIOUR \| OTHER, details?, website? (piège) }` → 202 ; 5 / min par adresse |
 
 ## Réservation (`/v1/booking`) — patient
 | Méthode | Route | Description |
@@ -159,6 +159,12 @@ Rôles (garde `@Roles()`): `public`, `patient`, `pro:practitioner`, `pro:secreta
 | Méthode | Route | Description |
 |---|---|---|
 | POST | `/contact` | `{ name, email, topic (PATIENT, PRACTITIONER, PHARMACY, OTHER), message, website? }` → 202 ; e-mail au support (`SUPPORT_EMAIL`) par le journal des notifications ; `website` est un champ piège (rempli = ignoré sans erreur) |
+
+## Back-office : signalements (`/v1/admin/reports`) — rôles VERIFIER, SUPPORT, SUPERADMIN
+| Méthode | Route | Description |
+|---|---|---|
+| GET | `/reports?scope=open\|closed` | signalements de profils avec soignant, motif, précisions, auteur (s’il était connecté), nombre de signalements ouverts sur le profil |
+| POST | `/reports/{id}/decision` | `{ action: DISMISS \| CONTACT \| UNPUBLISH }` : clore ; écrire au soignant (motif seulement, jamais l’auteur ni les précisions), reste à suivre ; retirer le profil du site et clore tous ses signalements ouverts. Journal d’audit |
 
 ## Webhooks et divers
 - `POST /v1/webhooks/sms/{provider}` : accusés de réception, réponses « OUI » (confirmation) et « STOP ».

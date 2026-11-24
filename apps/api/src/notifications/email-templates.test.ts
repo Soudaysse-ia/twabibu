@@ -35,4 +35,19 @@ describe('e-mail templates', () => {
     assert.equal(e.subject, 'Votre code Twabibu : 482193');
     assert.ok(e.html.includes('482193'));
   });
+
+  it('offers other times when the practice cancels, as booking links, escaped', () => {
+    const plain = emailTemplates.appointmentCancelledByPractice(data);
+    assert.equal(plain.subject, 'Votre rendez-vous est annulé');
+    const offered = emailTemplates.appointmentCancelledByPractice({
+      ...data,
+      manageUrl: 'https://twabibu.km/medecin-generaliste/moroni/amina-said/reserver?motif=m1',
+      alternatives: [{ startsAt: new Date('2026-11-16T06:00:00Z'), url: 'https://twabibu.km/x/reserver?motif=m1&creneau=a"b' }],
+    });
+    assert.equal(offered.subject, 'Votre rendez-vous est annulé : choisissez un autre horaire');
+    assert.ok(offered.html.includes('Lundi 16 novembre 2026 à 09:00'));
+    assert.ok(offered.html.includes('creneau=a&quot;b'), 'links are escaped');
+    assert.ok(offered.text.includes('- Lundi 16 novembre 2026 à 09:00 : https://twabibu.km/x/reserver?motif=m1&creneau=a"b'));
+    assert.ok(offered.html.includes('Voir toutes les disponibilités'));
+  });
 });

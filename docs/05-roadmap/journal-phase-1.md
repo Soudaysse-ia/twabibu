@@ -461,6 +461,53 @@ Vérifié : 113 tests de l’API (le test pharmacie vérifie la même délivranc
 - Renouvellements d’ordonnance (plusieurs délivrances successives) : à faire avec le reste de RX-05.
 - Restent les parcours P4 (journée du secrétariat) et P5 (absence et rendez-vous touchés).
 
+# Vingt-quatrième lot : rappel au cabinet des demandes sans réponse (23 novembre 2026)
+
+Fin d’AGENDA-07 (SPEC-05 §Règles 6) : en validation manuelle, une demande restée sans réponse laissait le patient sans nouvelles.
+
+## Fait
+- **Règle** `validationReminderDecision` (`apps/api/src/notifications/reminder-rules.ts`) : rappel quand la demande attend depuis 24 h, seulement entre 07:00 et 21:00, plus rien une fois l’heure du rendez-vous passée.
+- **Envoi** (`RemindersService.runValidationReminders`, appelé par la tâche `reminder-scheduler` toutes les 15 min) : un e-mail au praticien de l’agenda, au titulaire et aux administrateurs, jamais à la secrétaire ni au patient ; lien direct vers la demande (`/pro/app/agenda?rdv=…`), aucune donnée patient. Une seule fois : le journal des notifications garde la trace, un verrou Redis empêche deux exécutions simultanées d’envoyer deux fois. Pas de changement du schéma `Appointment`.
+- Article d’aide « Valider les demandes de rendez-vous » complété.
+
+Vérifié : 116 tests de l’API, dont 1 règle (horloge simulée : avant 24 h, nuit, après l’heure du rendez-vous) et 1 test d’intégration (destinataires, deux exécutions simultanées, une seule fois, rien pour une demande déjà acceptée, pas de nom du patient dans l’e-mail).
+
+# Vingt-cinquième lot : parcours P4 et P5, « non honoré » seulement après l’heure (23 novembre 2026)
+
+Fin de QA-01 : les huit parcours de `personas-et-parcours.md` tournent en navigateur.
+
+## Fait
+- **P4 — journée du secrétariat** (`apps/web/e2e/practice-day.e2e.ts`) : la secrétaire affiche l’agenda de Dr Amina Saïd, retrouve Ahmed Mze par les derniers chiffres de son téléphone, crée le rendez-vous (confirmation envoyée), note son arrivée, puis marque « Non honoré » le patient de la veille.
+- **P5 — absence imprévue** : la praticienne déclare une absence l’après-midi, voit les 2 rendez-vous touchés, enregistre en les annulant ; rendez-vous annulés par le cabinet, patients prévenus. Les deux parcours libèrent d’abord leurs créneaux et remettent l’agenda de démo en état à la fin.
+- **Écart corrigé** en écrivant P4 : « Non honoré » pouvait être posé sur un rendez-vous à venir, alors que SPEC-05 dit « après l’heure » et que chaque non-honoré compte pour proposer le blocage du patient. L’API le refuse désormais avant l’heure (`canMarkNoShow`, `CONFLICT`) et le tiroir ne propose plus le bouton avant.
+
+Vérifié : 115 tests de l’API (règle et cas réel : refus avant l’heure, accepté après), 16 parcours Playwright dont les 2 nouveaux, passés deux fois de suite sur la même base.
+
+## Écarts et limites
+- ~~P5 « Proposer un autre créneau »~~ : fait dans le lot suivant.
+
+# Vingt-sixième lot : proposer un autre créneau quand le cabinet annule (23 novembre 2026)
+
+Le dernier point de P5 : un patient dont le rendez-vous est annulé par le cabinet (absence, fermeture) devait chercher lui-même un nouvel horaire.
+
+## Fait
+- **E-mail d’annulation par le cabinet** (`appointmentCancelledByPractice`) : jusqu’à 3 prochains horaires libres en ligne, dans les 14 jours, avec le même soignant et le même motif ; chaque horaire ouvre la réservation avec ce créneau déjà choisi (`…/reserver?motif=…&creneau=…`), le bouton mène à toutes les disponibilités. Objet : « Votre rendez-vous est annulé : choisissez un autre horaire ».
+- Rien n’est proposé si le soignant ou le motif n’est pas réservable en ligne ; un échec du calcul n’empêche jamais l’envoi de l’annulation. Le SMS garde un lien court vers la fiche du soignant (160 caractères).
+- Calcul dans `AppointmentMessagesService` avec le moteur de disponibilités (`AvailabilityService`), donc sans créneau pendant l’absence qui vient d’être posée.
+
+Vérifié : 116 tests de l’API (modèle d’e-mail : horaires, liens échappés, texte ; cas réel : absence qui annule deux rendez-vous, un à 3 horaires proposés, aucun dans l’absence, lien vers la réservation du même motif) ; parcours P5 complété : le lien de l’e-mail ouvre la réservation sur l’horaire choisi, tenu pour le patient ; 16 parcours Playwright ; capture de l’e-mail à 375 px.
+
+# Vingt-septième lot : signaler un profil, file du back-office (23 novembre 2026)
+
+PROFILE-06 et ADMIN-07 : un visiteur qui trouve une information fausse (cabinet fermé, mauvais numéro) ou un faux soignant n’avait aucun moyen de le dire.
+
+## Fait
+- **Site** : lien « Signaler un problème avec ce profil » sur chaque fiche, page `/{spécialité}/{lieu}/{soignant}/signaler` : motif (5 choix), précisions facultatives (1 000 caractères, rappel « aucune information médicale », « le soignant ne saura pas qui a fait le signalement »), champ piège, confirmation annoncée.
+- **API** `POST /v1/practitioners/{slug}/reports` : profils publics seulement, 5 par minute et par adresse, auteur gardé seulement s’il est connecté ; modèle `Report` déjà présent, sans migration.
+- **Back-office** « Signalements » (vérification, support, super-admin) : file « À traiter / Traités », nombre de signalements ouverts sur le même profil, lien vers le profil public ; « Ignorer », « Écrire au soignant » (e-mail avec le motif seulement), « Retirer le profil du site » (confirmation, clôt les autres signalements du profil). Chaque décision va au journal d’audit.
+
+Vérifié : 119 tests de l’API (règles ; validation, piège, limite de débit, auteur ; droits par rôle ; e-mail au soignant sans l’auteur ni les précisions ; dépublication, profil plus signalable, décision impossible sur un signalement clos, journal d’audit) ; parcours Playwright « un visiteur signale, l’équipe ignore » ; captures du formulaire à 375 px et de la file à 1280 px.
+
 # Vingt-huitième lot : le praticien écrit son profil public (24 novembre 2026)
 
 PRO-07, sans les photos. Jusqu’ici, la présentation, les langues ou les moyens de paiement d’un soignant ne pouvaient venir que du jeu de démonstration : un praticien inscrit en ligne avait une page publique vide qu’il ne pouvait pas compléter.

@@ -5,7 +5,7 @@
 export const ADMIN_ROLES = ['SUPERADMIN', 'VERIFIER', 'SUPPORT', 'FINANCE'] as const;
 export type AdminRole = (typeof ADMIN_ROLES)[number];
 
-export type AdminArea = 'dashboard' | 'verification' | 'structures' | 'pharmacies' | 'referentials' | 'patients' | 'notifications' | 'placements' | 'audit' | 'flags';
+export type AdminArea = 'dashboard' | 'verification' | 'structures' | 'pharmacies' | 'referentials' | 'patients' | 'notifications' | 'reports' | 'placements' | 'audit' | 'flags';
 
 const AREAS: Record<AdminArea, readonly AdminRole[]> = {
   dashboard: ['VERIFIER', 'SUPPORT', 'FINANCE'],
@@ -15,6 +15,8 @@ const AREAS: Record<AdminArea, readonly AdminRole[]> = {
   referentials: ['VERIFIER'],
   patients: ['SUPPORT'],
   notifications: ['SUPPORT'],
+  /** Profile reports (ADMIN-07): checking a practitioner is verification work, answering people is support. */
+  reports: ['VERIFIER', 'SUPPORT'],
   placements: ['FINANCE'],
   audit: [],
   flags: [],

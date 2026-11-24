@@ -13,6 +13,7 @@ App séparée (`apps/admin`, `admin.twabibu.km`), rôle `PLATFORM_ADMIN` (+ sous
 4. **Patients** (support) : recherche par téléphone/nom, voir les RDV (sans notes cliniques), renvoyer un OTP, corriger un numéro (avec vérification), anonymiser un compte sur demande, voir les notifications envoyées.
 5. **Référentiels** : spécialités (nom, pluriel, groupe, motifs modèles, icône, actif), expertises, localités (île, nom, coordonnées, type), langues, assurances, jours fériés, articles du centre d'aide (markdown).
 6. **Signalements** : file, détail, actions (ignorer, contacter le soignant, dépublier).
+   > **Réalisé le 23/11/2026 (ADMIN-07)** : page « Signalements » (`apps/admin`), zone ouverte à la vérification et au support. « Écrire au soignant » envoie un e-mail avec le motif seulement, sans l’auteur ni les précisions, et garde le signalement à suivre ; « Retirer le profil du site » le dépublie (plus de recherche ni de réservation, jusqu’à nouvelle vérification) et clôt les autres signalements du profil. Modèle `Report` existant (`entityType = Practitioner`), décisions dans le journal d’audit.
 7. **Abonnements** : plans (nom, prix KMF, quota SMS, sièges), abonnement par structure (statut, dates, sièges), saisie d'un paiement manuel (espèces / virement / MVola / Huri Money, référence), génération de facture PDF, relances.
 8. **Notifications** : journal filtrable (statut, canal, numéro, date), détail, renvoi, statistiques par fournisseur et coût.
 9. **Journal d'audit** : recherche par acteur, entité, période ; export.
