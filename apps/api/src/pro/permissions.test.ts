@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { canForceOverlap, canManageAgendaSettings, canTransition, canViewAgenda, type MembershipContext } from './permissions.js';
+import { canForceOverlap, canManageAgendaSettings, canMarkNoShow, canTransition, canViewAgenda, type MembershipContext } from './permissions.js';
 
 const mine = { id: 'a1', practitionerId: 'p1' };
 const colleague = { id: 'a2', practitionerId: 'p2' };
@@ -46,5 +46,12 @@ describe('practice permissions', () => {
     assert.equal(canTransition('PENDING_VALIDATION', 'DONE'), false);
     assert.equal(canTransition('CANCELLED_BY_PATIENT', 'CONFIRMED'), false);
     assert.equal(canTransition('DONE', 'NO_SHOW'), false);
+  });
+
+  it('records a no-show only once the appointment time has passed', () => {
+    const startsAt = new Date('2026-11-24T07:00:00Z');
+    assert.equal(canMarkNoShow(startsAt, new Date('2026-11-24T06:59:59Z')), false);
+    assert.equal(canMarkNoShow(startsAt, startsAt), true);
+    assert.equal(canMarkNoShow(startsAt, new Date('2026-11-24T18:00:00Z')), true);
   });
 });

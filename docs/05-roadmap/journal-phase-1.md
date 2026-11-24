@@ -471,3 +471,17 @@ Fin d’AGENDA-07 (SPEC-05 §Règles 6) : en validation manuelle, une demande re
 - Article d’aide « Valider les demandes de rendez-vous » complété.
 
 Vérifié : 116 tests de l’API, dont 1 règle (horloge simulée : avant 24 h, nuit, après l’heure du rendez-vous) et 1 test d’intégration (destinataires, deux exécutions simultanées, une seule fois, rien pour une demande déjà acceptée, pas de nom du patient dans l’e-mail).
+
+# Vingt-cinquième lot : parcours P4 et P5, « non honoré » seulement après l’heure (23 novembre 2026)
+
+Fin de QA-01 : les huit parcours de `personas-et-parcours.md` tournent en navigateur.
+
+## Fait
+- **P4 — journée du secrétariat** (`apps/web/e2e/practice-day.e2e.ts`) : la secrétaire affiche l’agenda de Dr Amina Saïd, retrouve Ahmed Mze par les derniers chiffres de son téléphone, crée le rendez-vous (confirmation envoyée), note son arrivée, puis marque « Non honoré » le patient de la veille.
+- **P5 — absence imprévue** : la praticienne déclare une absence l’après-midi, voit les 2 rendez-vous touchés, enregistre en les annulant ; rendez-vous annulés par le cabinet, patients prévenus. Les deux parcours libèrent d’abord leurs créneaux et remettent l’agenda de démo en état à la fin.
+- **Écart corrigé** en écrivant P4 : « Non honoré » pouvait être posé sur un rendez-vous à venir, alors que SPEC-05 dit « après l’heure » et que chaque non-honoré compte pour proposer le blocage du patient. L’API le refuse désormais avant l’heure (`canMarkNoShow`, `CONFLICT`) et le tiroir ne propose plus le bouton avant.
+
+Vérifié : 115 tests de l’API (règle et cas réel : refus avant l’heure, accepté après), 16 parcours Playwright dont les 2 nouveaux, passés deux fois de suite sur la même base.
+
+## Écarts et limites
+- P5 décrit aussi « Proposer un autre créneau » aux patients touchés : pas encore fait (aujourd’hui : annuler et prévenir, ou garder les rendez-vous).
