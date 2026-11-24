@@ -46,6 +46,14 @@ export default async function PractitionerPage({ params }: { params: Promise<Par
   if (p.url !== `/${specialite}/${localite}/${slug}`) permanentRedirect(p.url);
 
   const practice = p.practices[0];
+  const access = practice
+    ? [
+        practice.accessInfo.floor,
+        practice.accessInfo.wheelchair ? 'Accessible en fauteuil roulant' : null,
+        practice.accessInfo.elevator ? 'Ascenseur' : null,
+        practice.accessInfo.parking ? 'Stationnement possible' : null,
+      ].filter(Boolean)
+    : [];
   const motives = p.agenda?.motives ?? [];
   const canBook = !!p.agenda?.onlineBookingEnabled && motives.length > 0;
   const bookHref = `${p.url}/reserver`;
@@ -105,12 +113,13 @@ export default async function PractitionerPage({ params }: { params: Promise<Par
                   </a>
                 ) : null}
               </div>
-              {practice.accessInfo.floor || practice.accessInfo.wheelchair !== undefined ? (
+              {access.length || practice.accessInfo.notes ? (
                 <div className="flex gap-2 border-t border-border pt-3 text-sm text-text">
                   <Accessibility aria-hidden="true" size={16} className="mt-1 shrink-0 text-text-muted" />
-                  <span>
-                    {[practice.accessInfo.floor, practice.accessInfo.wheelchair ? 'Accessible en fauteuil roulant' : null].filter(Boolean).join(' · ')}
-                  </span>
+                  <div className="flex flex-col gap-1">
+                    {access.length ? <span>{access.join(' · ')}</span> : null}
+                    {practice.accessInfo.notes ? <span className="whitespace-pre-line text-text-muted">{practice.accessInfo.notes}</span> : null}
+                  </div>
                 </div>
               ) : null}
             </Card>

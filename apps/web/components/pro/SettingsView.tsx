@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CalendarOff, Plus, Trash2, UserRound, Users } from 'lucide-react';
+import { Building2, CalendarOff, Plus, Trash2, UserRound, Users } from 'lucide-react';
 import { fr } from '@twabibu/i18n';
 import { Badge, Button, Card, cn } from '@twabibu/ui';
 import { formatDateLong, formatKmf, formatTime, toDateKey, zonedToUtc } from '@twabibu/utils';
@@ -162,6 +162,10 @@ export function SettingsView() {
           <h1 className="text-xl font-bold">Réglages de l’agenda</h1>
           <p className="text-sm text-text-muted">Ces réglages s’appliquent immédiatement aux réservations en ligne.</p>
           <div className="mt-1 flex flex-wrap gap-x-5">
+            <Link href="/pro/app/reglages/cabinet" className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-primary hover:underline">
+              <Building2 aria-hidden="true" size={16} />
+              {fr.practiceEdit.settingsLink}
+            </Link>
             {membership.role === 'SECRETARY' ? null : (
               <Link href="/pro/app/reglages/profil" className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-primary hover:underline">
                 <UserRound aria-hidden="true" size={16} />

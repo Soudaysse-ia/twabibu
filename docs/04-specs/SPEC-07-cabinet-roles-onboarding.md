@@ -43,6 +43,8 @@ Statuts : `UNVERIFIED` (pièces manquantes) → `PENDING` (dossier déposé) →
 ## Paramètres du cabinet
 Nom, type, logo, description, téléphone, e-mail, site, lieux (CRUD), notification (SPEC-08), abonnement (SPEC-11), suppression (demande au support).
 
+> **Réalisé le 24/11/2026 (PRO-06, partiel)** : page « Cabinet et horaires » (`/pro/app/reglages/cabinet`), une fiche par lieu existant : nom, adresse (avec repère local), île et localité, téléphone (vide = non affiché), position (repère à faire glisser ou toucher la carte, « Je suis au cabinet : utiliser ma position », retour au centre de la localité ; une position hors des Comores est refusée ; sans repère, le centre de la localité), accès (étage, fauteuil roulant, ascenseur, stationnement, précisions), horaires d’ouverture (jusqu’à 3 plages par jour, au quart d’heure, écrits en 24 h quel que soit le téléphone ; plages qui se chevauchent ou finissent avant de commencer refusées ; « Copier le lundi du mardi au vendredi »). Toute l’équipe lit, le titulaire et l’administration modifient. Changer de localité change l’adresse du profil public. Chaque modification est journalisée (`practice.update`, noms des champs). Restent : ajouter ou retirer un lieu, logo, description, e-mail et site du cabinet.
+
 ## Critères d'acceptation
 - [ ] Inscription + onboarding complets en environnement de test en < 15 min par un utilisateur non formé (test utilisateur).
 - [ ] Un praticien `PENDING` n'apparaît pas dans la recherche ; après validation admin il apparaît en < 1 min.

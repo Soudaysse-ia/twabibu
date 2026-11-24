@@ -7,5 +7,6 @@ export * from './auth.js';
 export * from './contact.js';
 export * from './team.js';
 export * from './profile.js';
+export * from './practice.js';
 export * from './reports.js';
 export * from './reference/index.js';
