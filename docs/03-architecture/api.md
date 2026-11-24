@@ -90,6 +90,7 @@ Rôles (garde `@Roles()`): `public`, `patient`, `pro:practitioner`, `pro:secreta
 | GET | `/stats?from=&to=` | KPI |
 | GET, PATCH, DELETE | `/members`, `/members/{id}` | équipe (titulaire et administrateurs) : liste avec invitations en attente et agendas ; PATCH = droits d’une secrétaire `{ agendaIds?, manageSettings? }` ; DELETE retire le membre et ferme toutes ses sessions (jamais le titulaire ni soi-même) |
 | POST | `/members/invite` | `{ email, role: SECRETARY \| ADMIN, agendaIds?, manageSettings? }` → e-mail avec un lien de 7 jours ; seul le titulaire invite un administrateur |
+| GET, PUT | `/profiles`, `/profiles/{practitionerId}` | profils publics modifiables par ce membre (le sien ; tous pour le titulaire et les administrateurs ; 403 pour une secrétaire) avec les choix proposés (langues, moyens de paiement, assurances) ; PUT `{ bio, acceptsNewPatients, expertises, languages, paymentMethods, insurances, educations[{ year, diploma, school }] }`, nom, spécialité et n° d’autorisation ignorés |
 | DELETE | `/invitations/{id}` | annule une invitation en attente |
 | GET | `/audit?from=&to=` | journal |
 | GET/PATCH | `/notification-settings` | rappels |

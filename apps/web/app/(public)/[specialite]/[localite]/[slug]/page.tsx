@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
-import { Accessibility, BadgeCheck, CalendarCheck, Clock, Flag, Landmark, Languages, MapPin, Phone, UserRound, Wallet } from 'lucide-react';
+import { Accessibility, BadgeCheck, CalendarCheck, Clock, Flag, GraduationCap, Landmark, Languages, MapPin, Phone, UserRound, Wallet } from 'lucide-react';
 import { fr } from '@twabibu/i18n';
 import { Badge, buttonClasses, Card, CardTitle, Container } from '@twabibu/ui';
 import { formatKmf, formatPhone } from '@twabibu/utils';
@@ -116,10 +116,10 @@ export default async function PractitionerPage({ params }: { params: Promise<Par
             </Card>
           ) : null}
 
-          {p.bio ? (
+          {p.bio || p.expertises.length ? (
             <Card className="flex flex-col gap-3">
               <CardTitle as="h2" icon={<UserRound aria-hidden="true" size={16} />}>Présentation</CardTitle>
-              <p className="whitespace-pre-line text-text">{p.bio}</p>
+              {p.bio ? <p className="whitespace-pre-line text-text">{p.bio}</p> : null}
               {p.expertises.length ? (
                 <ul className="flex flex-wrap gap-2">
                   {p.expertises.map((e) => (
@@ -172,6 +172,22 @@ export default async function PractitionerPage({ params }: { params: Promise<Par
             <Card className="flex flex-col gap-3">
               <CardTitle as="h2" icon={<Languages aria-hidden="true" size={16} />}>Langues parlées</CardTitle>
               <p className="text-text">{p.languages.map((l) => l.name).join(', ')}</p>
+            </Card>
+          ) : null}
+
+          {p.educations.length ? (
+            <Card className="flex flex-col gap-3">
+              <CardTitle as="h2" icon={<GraduationCap aria-hidden="true" size={16} />}>Formations</CardTitle>
+              <ul className="flex flex-col gap-2">
+                {p.educations.map((e) => (
+                  <li key={`${e.year}-${e.diploma}`} className="flex gap-3 text-text">
+                    <span className="w-12 shrink-0 font-medium text-ink">{e.year}</span>
+                    <span>
+                      {e.diploma}, {e.school}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </Card>
           ) : null}
 

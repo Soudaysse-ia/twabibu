@@ -112,6 +112,8 @@ export class ProSignupService {
           licenseNumber: input.licenseNumber,
           canPrescribe: speciality.canPrescribe,
           languages: ['fr'],
+          // Patients pay at the practice, almost always in cash: the practitioner adds mobile money in their profile if they take it.
+          paymentMethods: ['CASH'],
           verificationStatus: 'PENDING',
           isPublished: false,
         },

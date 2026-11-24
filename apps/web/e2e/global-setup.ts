@@ -27,6 +27,14 @@ function redis(url: string, args: string[]): Promise<void> {
   });
 }
 
+/**
+ * The demo accounts sign in again and again across journeys (the practitioner alone, five times): their code-request
+ * limit is reset before each sign-in, not only at the start of the run.
+ */
+export async function resetCodeLimit(email: string) {
+  await redis(process.env.REDIS_URL ?? 'redis://localhost:6379', ['DEL', `twabibu:otp-rate:${email}`]);
+}
+
 export default async function globalSetup() {
   const keys = Object.values(DEMO).map((email) => `twabibu:otp-rate:${email}`);
   const url = process.env.REDIS_URL ?? 'redis://localhost:6379';
