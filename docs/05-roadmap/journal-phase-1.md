@@ -478,3 +478,18 @@ Vérifié : 120 tests de l’API, dont 6 nouveaux (`apps/api/src/profile.test.ts
 - Pas de rubrique « Expérience » (le champ existe en base, rien ne l’affiche encore).
 - Les champs de saisie de Twabibu Pro hors de cette page restent en 14 px sur mobile ; ceux de cette page passent à 16 px comme le demande la charte.
 
+# Vingt-neuvième lot : la fiche du cabinet (24 novembre 2026)
+
+PRO-06, pour la première version : un soignant inscrit en ligne ne pouvait corriger ni son adresse, ni son téléphone, ni ses horaires, et son repère restait au centre de sa ville.
+
+## Fait
+- **API** : `GET /v1/pro/orgs/{orgId}/practices` et `PUT …/practices/{practiceId}`. Toute l’équipe lit, le titulaire et l’administration modifient ; le lieu d’un autre cabinet est introuvable. Téléphone normalisé (+269), localité vérifiée, position bornée aux trois îles (sans repère : centre de la localité), horaires contrôlés et triés (`apps/api/src/pro/practice-rules.ts`), accès vide écarté. Un enregistrement qui ne change rien n’écrit rien au journal ; sinon `practice.update` avec les noms des champs.
+- **Twabibu Pro** : page « Cabinet et horaires » (lien dans les réglages pour toute l’équipe, en lecture seule pour le secrétariat et les praticiens). Carte OpenStreetMap avec un repère à faire glisser ou à poser en touchant la carte, bouton « Je suis au cabinet : utiliser ma position », retour au centre de la localité ; horaires en listes au quart d’heure, écrits en 24 h même sur un téléphone réglé en anglais (un champ « heure » du navigateur y affichait « 02:30 PM », tronqué) ; « Copier le lundi du mardi au vendredi ».
+- **Page publique** : l’accès montre aussi l’ascenseur, le stationnement et les précisions pour venir.
+
+Vérifié : 125 tests de l’API, dont 5 nouveaux (`apps/api/src/practice.test.ts` : règles des horaires et de l’accès, droits de chaque rôle, autre cabinet, téléphone, chevauchement, repère hors des Comores, localité inconnue, enregistrement visible sur le profil public, repère placé à la main gardé, journal sans doublon) ; 16 parcours Playwright, dont un nouveau (`apps/web/e2e/pro-practice.e2e.ts` : la direction précise l’accès, la page publique le montre, la secrétaire voit la fiche sans pouvoir la modifier) ; captures à 375 px et 1280 px.
+
+## Écarts et limites
+- Pas d’ajout ni de suppression de lieu : un deuxième lieu demande aussi un agenda et le rattachement des praticiens, à faire avec les établissements (SPEC-10).
+- Pas de logo ni de photos du cabinet (stockage de fichiers à mettre en place).
+
