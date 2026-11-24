@@ -540,3 +540,19 @@ Vérifié : 125 tests de l’API, dont 5 nouveaux (`apps/api/src/practice.test.t
 - Pas d’ajout ni de suppression de lieu : un deuxième lieu demande aussi un agenda et le rattachement des praticiens, à faire avec les établissements (SPEC-10).
 - Pas de logo ni de photos du cabinet (stockage de fichiers à mettre en place).
 
+# Trente et unième lot : vrais SMS, Twilio ou Infobip (24 novembre 2026)
+
+NOTIF-02, partie SMS. Les SMS ne servent qu’aux patients inscrits par le cabinet sans adresse e-mail (ADR-016), mais jusqu’ici aucun ne pouvait partir : seul le fournisseur factice existait, et l’API refusait de démarrer avec un autre réglage.
+
+## Fait
+- **Fournisseurs** `TwilioSmsProvider` et `InfobipSmsProvider` (`apps/api/src/notifications/sms-provider.ts`), choisis par `SMS_PROVIDER`. Délai maximal de 10 s par envoi (la file BullMQ refait jusqu’à 3 tentatives) ; un message refusé par Infobip à l’intérieur d’une réponse 200 compte comme un échec ; toute suite de chiffres est masquée dans les erreurs gardées au journal et en base, car le fournisseur peut y citer le numéro.
+- **Réglages** `SMS_API_KEY`, `SMS_ACCOUNT_SID` (Twilio), `SMS_BASE_URL` (Infobip), `SMS_FROM`, vérifiés au démarrage : réglage manquant, identifiant Twilio mal formé ou adresse Infobip hors de `*.api.infobip.com` arrêtent l’API avec un message clair. La valeur `local`, jamais implémentée, est retirée.
+- **Boîte de messages de développement** (`/v1/dev/messages`) fermée dès qu’un vrai fournisseur d’e-mail ou de SMS est réglé : elle montrerait le texte de vrais messages.
+- **Procédure** : paragraphe « SMS » dans `runbooks/mise-en-production-hetzner.md`, exemples `.env.example` et `infra/env/production.env.example`.
+
+Vérifié : 11 tests (réglages de chaque fournisseur, choix du fournisseur, requête Twilio et Infobip exacte, refus dans une réponse 200, erreurs sans numéro), réseau remplacé par une doublure : aucun SMS réel envoyé. Tests de l’API complets.
+
+## Écarts et limites
+- Aucun compte fournisseur n’est encore ouvert : à choisir (Twilio ou Infobip), à tester sur les deux opérateurs comoriens, et à vérifier si l’expéditeur « Twabibu » est accepté.
+- Pas d’accusés de réception (webhooks) ni de bascule SMS → e-mail.
+
