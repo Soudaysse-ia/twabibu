@@ -32,6 +32,7 @@ Champs : agenda, patient (recherche instantanée nom/téléphone ; « + Nouveau 
 4. Statuts et transitions : `PENDING_VALIDATION → CONFIRMED | CANCELLED_BY_PRACTICE` ; `CONFIRMED → ARRIVED → IN_CONSULTATION → DONE` ; `CONFIRMED → NO_SHOW` (après l'heure, refusé avant par l’API et absent du tiroir, 23/11/2026) ; `CONFIRMED → CANCELLED_*`. Un `NO_SHOW` incrémente `PatientRecord.noShowCount` ; à 3, suggestion de blocage.
 5. Déplacement par le cabinet → SMS au patient ; annulation par le cabinet → SMS avec lien « reprendre rendez-vous ».
 6. Validation manuelle : si `requiresValidation`, les RDV en ligne arrivent `PENDING_VALIDATION`, le cabinet a 24 h (rappel), le patient reçoit « demande envoyée » puis « confirmé » / « refusé ».
+   > **Réalisé le 23/11/2026** : le rappel part par e-mail (modèle `appointment.validation-reminder`) au praticien de l’agenda et au titulaire et aux administrateurs, jamais à la secrétaire ni au patient ; une seule fois par demande, entre 07:00 et 21:00, avec un lien direct vers la demande et sans aucune donnée patient ; plus rien après l’heure du rendez-vous. Même tâche planifiée que les rappels patients (`reminder-scheduler`, toutes les 15 min), règle dans `reminder-rules.ts`.
 7. Les plages en ligne ne peuvent pas être réduites de façon à orpheliner des RDV existants sans affichage des RDV impactés.
 8. Fuseau `Indian/Comoro` partout dans l'UI ; stockage UTC.
 9. Journal : toute action sur un RDV crée un `AppointmentEvent` (acteur, avant/après).

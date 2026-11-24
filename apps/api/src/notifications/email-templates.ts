@@ -233,6 +233,22 @@ export const emailTemplates = {
     ),
   }),
 
+  /** To the practice: an online request still waits for its answer after 24 h (SPEC-05 §Règles 6). No patient data. */
+  validationReminder: (d: { practitionerName: string; startsAt: Date; url: string }): RenderedEmail => ({
+    subject: 'Une demande de rendez-vous attend votre réponse',
+    text: `Bonjour,\n\nUne demande de rendez-vous en ligne attend votre réponse depuis plus de 24 heures :\n${when(d.startsAt)} avec ${d.practitionerName}.\n\nAcceptez-la ou refusez-la pour que le patient soit prévenu :\n${d.url}\n\nTwabibu, à vos côtés dans chaque temps de soin.`,
+    html: layout(
+      'Une demande attend votre réponse',
+      [
+        'Bonjour,',
+        'Une demande de rendez-vous en ligne attend votre réponse depuis plus de 24 heures :',
+        `<strong style="color:#0B2A5B">${esc(when(d.startsAt))}</strong><br>avec ${esc(d.practitionerName)}`,
+        'Acceptez-la ou refusez-la pour que le patient soit prévenu.',
+      ],
+      { label: 'Répondre à la demande', url: d.url },
+    ),
+  }),
+
   /** Contact form (WEB-02), sent to the support address only. The sender's text is escaped and never shown as HTML. */
   contactMessage: (d: { name: string; email: string; topicLabel: string; message: string; receivedAt: Date }): RenderedEmail => ({
     subject: `Contact (${d.topicLabel}) : ${d.name}`,

@@ -293,7 +293,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
       },
       {
         kind: 'p',
-        text: 'Ouvrez une demande puis choisissez « Accepter » ou « Refuser ». Le patient est prévenu automatiquement, par e-mail ou par SMS.',
+        text: 'Ouvrez une demande puis choisissez « Accepter » ou « Refuser ». Le patient est prévenu automatiquement, par e-mail ou par SMS. Une demande restée sans réponse 24 heures vous est rappelée par e-mail, à vous et aux responsables du cabinet.',
       },
     ],
     action: { label: 'Ouvrir Twabibu Pro', href: '/pro/connexion' },
