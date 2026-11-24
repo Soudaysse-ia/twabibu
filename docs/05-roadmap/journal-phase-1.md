@@ -540,3 +540,17 @@ Vérifié : 125 tests de l’API, dont 5 nouveaux (`apps/api/src/practice.test.t
 - Pas d’ajout ni de suppression de lieu : un deuxième lieu demande aussi un agenda et le rattachement des praticiens, à faire avec les établissements (SPEC-10).
 - Pas de logo ni de photos du cabinet (stockage de fichiers à mettre en place).
 
+# Trentième lot : « Votre cabinet est prêt à X % » (24 novembre 2026)
+
+PRO-02, pour la première version : un soignant inscrit en ligne arrivait sur un accueil vide sans savoir quoi régler avant que les patients puissent réserver.
+
+## Fait
+- **API** : `GET /v1/pro/orgs/{orgId}/setup` calcule six étapes (vérification, adresse et repère, horaires d’ouverture, motifs et tarifs, plages en ligne, présentation) à partir des réglages, sans aucune donnée de patient. Règles pures dans `apps/api/src/pro/setup-rules.ts` : l’adresse et les horaires ne comptent que pour qui gère le cabinet ; pour la direction sans agenda, une étape des praticiens n’est faite que si elle l’est pour tous ; un repère resté au centre de la localité (là où l’inscription le pose) n’est pas « placé » ; un motif réservable en ligne sans tarif laisse l’étape « motifs » à faire.
+- **Twabibu Pro** : carte en tête de l’accueil, barre d’avancement accessible (`progressbar`), étapes cochées, « En cours » pour la vérification, lien « Compléter » vers chaque réglage. Absente pour le secrétariat, elle disparaît à 100 % ; les comptes de démonstration sont à 100 %.
+
+Vérifié : 138 tests de l’API, dont 4 nouveaux (`apps/api/src/setup.test.ts` : règles, compte juste après l’inscription à 0 % et en attente de vérification, collègue sans étapes du cabinet, secrétaire sans carte, 100 % une fois tout réglé) ; 19 parcours Playwright, P3 complété (0 % à l’arrivée, lien vers les horaires, 17 % après avoir ouvert le lundi) ; captures à 375 px et 1280 px.
+
+## Écarts et limites
+- Pas d’assistant pas à pas en plein écran : la carte renvoie vers les pages de réglages existantes.
+- Pas d’étape « pièces justificatives » tant que leur dépôt (PRO-03) n’existe pas.
+

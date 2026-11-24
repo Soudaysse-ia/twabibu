@@ -11,6 +11,7 @@ import { CurrentMembership, ProGuard } from './pro.guard.js';
 import { PracticeOverviewService } from './practice-overview.service.js';
 import { ProService } from './pro.service.js';
 import { SettingsService } from './settings.service.js';
+import { SetupService } from './setup.service.js';
 
 const isoDate = z.iso.datetime().transform((v) => new Date(v));
 const today = () => new Date().toISOString().slice(0, 10);
@@ -123,6 +124,7 @@ export class ProController {
     private readonly pro: ProService,
     private readonly settings: SettingsService,
     private readonly overview: PracticeOverviewService,
+    private readonly setup: SetupService,
   ) {}
 
   @Get('agendas')
@@ -140,6 +142,14 @@ export class ProController {
   @ApiOperation({ summary: 'Accueil du praticien : journée, demandes à valider, patients récents. Aucune donnée médicale.' })
   dashboard(@CurrentMembership() m: MembershipContext) {
     return this.overview.dashboard(m);
+  }
+
+  @Get('setup')
+  @ApiOperation({
+    summary: 'Avancement de l’installation (vérification, lieu, horaires, motifs, plages en ligne, profil) et liens vers chaque réglage.',
+  })
+  setupProgress(@CurrentMembership() m: MembershipContext) {
+    return this.setup.progress(m);
   }
 
   @Get('patients/list')

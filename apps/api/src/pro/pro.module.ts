@@ -8,11 +8,12 @@ import { ProService } from './pro.service.js';
 import { ProfileController } from './profile.controller.js';
 import { ProfileService } from './profile.service.js';
 import { SettingsService } from './settings.service.js';
+import { SetupService } from './setup.service.js';
 import { InvitationsController, TeamController } from './team.controller.js';
 import { TeamService } from './team.service.js';
 
 @Module({
   controllers: [ProMeController, ProController, TeamController, InvitationsController, ProfileController, PracticeController],
-  providers: [ProService, SettingsService, PracticeOverviewService, TeamService, ProfileService, PracticeService, ProGuard],
+  providers: [ProService, SettingsService, PracticeOverviewService, TeamService, ProfileService, PracticeService, SetupService, ProGuard],
 })
 export class ProModule {}
