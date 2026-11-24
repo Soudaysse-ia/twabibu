@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BadgeCheck, Bell, BookOpen, Building2, CalendarClock, Flag, LayoutDashboard, LogOut, Megaphone, ScrollText, Store, Users } from 'lucide-react';
+import { BadgeCheck, Bell, BookOpen, Building2, CalendarClock, Flag, LayoutDashboard, LogOut, Megaphone, MessageSquareWarning, ScrollText, Store, Users } from 'lucide-react';
 import { cn } from '@twabibu/ui';
 import { api } from '@/lib/api';
 
@@ -16,6 +16,7 @@ const ITEMS = [
   { href: '/referentiels', label: 'Référentiels', icon: BookOpen, area: 'referentials' },
   { href: '/patients', label: 'Patients', icon: Users, area: 'patients' },
   { href: '/notifications', label: 'Notifications', icon: Bell, area: 'notifications' },
+  { href: '/signalements', label: 'Signalements', icon: MessageSquareWarning, area: 'reports' },
   { href: '/journal', label: 'Journal d’audit', icon: ScrollText, area: 'audit' },
   { href: '/options', label: 'Options', icon: Flag, area: 'flags' },
 ];

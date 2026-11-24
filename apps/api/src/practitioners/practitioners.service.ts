@@ -104,6 +104,17 @@ export class PractitionersService {
     return { practitioners, pages: [...pages.values()].sort((a, b) => a.url.localeCompare(b.url)) };
   }
 
+  /**
+   * « Signaler un problème avec ce profil » (SPEC-02, PROFILE-06): stored for the back-office queue (ADMIN-07).
+   * Only public profiles can be reported. The honeypot drops robots silently; the reporter is kept only when signed in.
+   */
+  async report(slug: string, input: { reason: string; details?: string; website?: string }, reporterId: string | null): Promise<void> {
+    if (input.website && input.website.trim()) return;
+    const practitioner = await this.prisma.practitioner.findFirst({ where: { slug, ...publicPractitioner }, select: { id: true } });
+    if (!practitioner) throw new ApiException('NOT_FOUND', 'Practitioner not found');
+    await this.prisma.report.create({ data: { entityType: 'Practitioner', entityId: practitioner.id, reason: input.reason, details: input.details || null, reporterId } });
+  }
+
   /** Public profile (SPEC-02). Only verified, published practitioners are ever returned. */
   async profile(slug: string) {
     const p = await this.prisma.practitioner.findFirst({ where: { slug, ...publicPractitioner }, include: profileInclude });

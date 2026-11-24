@@ -233,6 +233,21 @@ export const emailTemplates = {
     ),
   }),
 
+  /** To a practitioner whose public profile was reported (ADMIN-07): what to check, never who reported it. */
+  profileReportNotice: (d: { name: string; reasonLabel: string; url: string }): RenderedEmail => ({
+    subject: 'Une information de votre profil Twabibu est à vérifier',
+    text: `Bonjour ${d.name},\n\nUn visiteur nous a signalé un point à vérifier sur votre profil public : « ${d.reasonLabel} ».\n\nMerci de relire votre profil et de le mettre à jour si nécessaire, ou de répondre à l’équipe Twabibu depuis le formulaire de contact :\n${d.url}\n\nTwabibu, à vos côtés dans chaque temps de soin.`,
+    html: layout(
+      'Une information est à vérifier',
+      [
+        `Bonjour ${esc(d.name)},`,
+        `Un visiteur nous a signalé un point à vérifier sur votre profil public : <strong style="color:#0B2A5B">« ${esc(d.reasonLabel)} »</strong>.`,
+        'Merci de relire votre profil et de le mettre à jour si nécessaire, ou de répondre à l’équipe Twabibu depuis le formulaire de contact.',
+      ],
+      { label: 'Ouvrir Twabibu Pro', url: d.url },
+    ),
+  }),
+
   /** To the practice: an online request still waits for its answer after 24 h (SPEC-05 §Règles 6). No patient data. */
   validationReminder: (d: { practitionerName: string; startsAt: Date; url: string }): RenderedEmail => ({
     subject: 'Une demande de rendez-vous attend votre réponse',
