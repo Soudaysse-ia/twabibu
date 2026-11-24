@@ -34,6 +34,17 @@ test('P3 + P6 — un soignant s’inscrit, Twabibu vérifie son dossier, son pro
   await expect(
     page.getByText('Votre profil sera publié après la vérification de votre dossier'),
   ).toBeVisible();
+  // PRO-02: everything is still to set up; each step leads to its setting.
+  await expect(page.getByRole('heading', { name: 'Votre cabinet est prêt à 0 %' })).toBeVisible();
+  await expect(page.getByRole('progressbar', { name: 'Avancement de l’installation' })).toHaveAttribute('aria-valuenow', '0');
+  await page.getByRole('link', { name: 'Compléter : Horaires d’ouverture' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Cabinet et horaires' })).toBeVisible();
+  await page.getByRole('group', { name: 'Lundi' }).getByRole('checkbox').check();
+  await page.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Cabinet enregistré' })).toBeVisible();
+  // One step out of six.
+  await page.goto('/pro/app');
+  await expect(page.getByRole('heading', { name: 'Votre cabinet est prêt à 17 %' })).toBeVisible();
 
   // P6: the back-office checks the file and publishes it.
   const admin = await (await browser.newContext()).newPage();

@@ -92,6 +92,7 @@ Rôles (garde `@Roles()`): `public`, `patient`, `pro:practitioner`, `pro:secreta
 | POST | `/members/invite` | `{ email, role: SECRETARY \| ADMIN, agendaIds?, manageSettings? }` → e-mail avec un lien de 7 jours ; seul le titulaire invite un administrateur |
 | GET, PUT | `/profiles`, `/profiles/{practitionerId}` | profils publics modifiables par ce membre (le sien ; tous pour le titulaire et les administrateurs ; 403 pour une secrétaire) avec les choix proposés (langues, moyens de paiement, assurances) ; PUT `{ bio, acceptsNewPatients, expertises, languages, paymentMethods, insurances, educations[{ year, diploma, school }] }`, nom, spécialité et n° d’autorisation ignorés |
 | GET, PUT | `/practices`, `/practices/{practiceId}` | lieux de consultation du cabinet et `canEdit` (toute l’équipe lit) ; PUT (titulaire et administrateurs) `{ name, addressLine, localityId, phone \| null, position: { lat, lng } \| null, accessInfo: { floor?, wheelchair?, elevator?, parking?, notes? }, openingHours: { mon?: [["08:00","12:00"]], … } }` ; position hors des Comores, plages qui se chevauchent et téléphone invalide refusés ; sans position, centre de la localité |
+| GET | `/setup` | avancement de l’installation `{ percent, steps: [{ key: verification \| place \| hours \| motives \| availability \| profile, done, waiting?, href }] }` ; `percent: null` et aucune étape pour une secrétaire |
 | DELETE | `/invitations/{id}` | annule une invitation en attente |
 | GET | `/audit?from=&to=` | journal |
 | GET/PATCH | `/notification-settings` | rappels |

@@ -8,6 +8,7 @@ import { formatDateLong, formatTime } from '@twabibu/utils';
 import { api, errorMessage } from '@/lib/api-client';
 import type { ProDashboard as Data } from '@/lib/pro-types';
 import { useMembership } from './ProContext';
+import { SetupChecklist } from './SetupChecklist';
 
 const STATUS: Record<string, { label: string; tone: 'info' | 'success' | 'warning' | 'pharmacy' }> = {
   PENDING_VALIDATION: { label: 'À valider', tone: 'warning' },
@@ -63,6 +64,8 @@ export function ProDashboard() {
           </Link>
         </div>
       </div>
+
+      <SetupChecklist />
 
       <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {tiles.map(({ icon: Icon, label, value, hint }) => (
