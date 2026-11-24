@@ -229,7 +229,7 @@ export const fr = {
     payment: 'Moyens de paiement',
     paymentLabels: { CASH: 'Espèces', MVOLA: 'MVola', HURI: 'Huri Money', CARD: 'Carte bancaire', TRANSFER: 'Virement' } as Record<string, string>,
     insurances: 'Assurances acceptées',
-    prices: 'Les tarifs se règlent motif par motif, dans les réglages de l’agenda.',
+    prices: 'Twabibu n’encaisse rien : vous indiquez seulement aux patients comment vous régler au cabinet. Les tarifs se règlent motif par motif, dans les réglages de l’agenda.',
     pricesLink: 'Régler les tarifs',
     educations: 'Formations et diplômes',
     year: 'Année',

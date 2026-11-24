@@ -181,6 +181,7 @@ describe('Back-office (SPEC-11)', () => {
     const practitioner = await prisma.practitioner.findFirstOrThrow({ where: { organizationId: created.organizationId } });
     assert.equal(practitioner.verificationStatus, 'PENDING');
     assert.equal(practitioner.canPrescribe, speciality.canPrescribe);
+    assert.deepEqual(practitioner.paymentMethods, ['CASH']);
     assert.ok(await prisma.notification.findFirst({ where: { recipient: email, template: 'proWelcome' } }));
 
     // Hidden from patients until validated.
