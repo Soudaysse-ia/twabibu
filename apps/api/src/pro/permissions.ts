@@ -68,6 +68,11 @@ const TRANSITIONS: Record<string, readonly string[]> = {
   NO_SHOW: ['CONFIRMED'],
 };
 
+/** A no-show is recorded only once the appointment time has passed (SPEC-05 §Règles 4): it counts against the patient. */
+export function canMarkNoShow(startsAt: Date, now: Date): boolean {
+  return now >= startsAt;
+}
+
 export function canTransition(from: string, to: string): boolean {
   return TRANSITIONS[from]?.includes(to) ?? false;
 }

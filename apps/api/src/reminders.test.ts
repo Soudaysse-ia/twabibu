@@ -67,6 +67,7 @@ describe('Appointment reminders (SPEC-08 NOTIF-05)', () => {
       if (previous) await prisma.organizationNotificationSettings.update({ where: { organizationId: orgId }, data: { reminderOffsetsHours: previous.reminderOffsetsHours, reminderHour: previous.reminderHour, askConfirmation: previous.askConfirmation } });
       else await prisma.organizationNotificationSettings.deleteMany({ where: { organizationId: orgId } });
       await prisma.notification.deleteMany({ where: { relatedAppointmentId: { in: created.appointments } } });
+      if (created.appointments.length) await app.get(RedisService).client.del(...created.appointments.map((id) => `twabibu:validation-reminder:${id}`));
       await prisma.appointment.deleteMany({ where: { id: { in: created.appointments } } });
       await prisma.patientRecord.deleteMany({ where: { id: { in: created.records } } });
       await prisma.notification.deleteMany({ where: { recipient: { in: [DESK, ACCOUNT] } } });
@@ -142,5 +143,37 @@ describe('Appointment reminders (SPEC-08 NOTIF-05)', () => {
     assert.ok(report.optedOut >= 1);
     assert.equal((await reminderMails(a.id)).length, 0);
     await request(app.getHttpServer()).get('/v1/me/notification-preferences').expect(401);
+  });
+
+  it('reminds the practitioner and the managers of a request left unanswered for 24 h, once (AGENDA-07)', async () => {
+    const amina = await login(AMINA);
+    // An online request for the Monday at 15:00, sent a week before at 09:00 and still waiting at 10:00 the next day.
+    const sent = local(addDaysToDateKey(day, -7), 9);
+    const a = await book(amina, 15, { newPatient: { firstName: 'Demande', lastName: 'Attente' } });
+    await prisma.appointment.update({ where: { id: a.id }, data: { status: 'PENDING_VALIDATION', createdAt: sent } });
+    const mails = () => prisma.notification.findMany({ where: { relatedAppointmentId: a.id, template: 'appointment.validation-reminder' } });
+    const nextDay = addDaysToDateKey(day, -6);
+
+    await reminders.runValidationReminders(local(nextDay, 8, 30));
+    assert.equal((await mails()).length, 0, 'not before 24 h');
+    await reminders.runValidationReminders(local(addDaysToDateKey(day, -7), 22));
+    assert.equal((await mails()).length, 0);
+
+    // Two runs at once: one e-mail per recipient, not two.
+    await Promise.all([reminders.runValidationReminders(local(nextDay, 10)), reminders.runValidationReminders(local(nextDay, 10))]);
+    const recipients = (await mails()).map((n) => n.recipient).sort();
+    assert.deepEqual(recipients, [OWNER, AMINA].sort(), 'the practitioner and the owner, never the secretary');
+    const payload = (await mails())[0]!.payload as { text: string; subject: string };
+    assert.ok(payload.text.includes(`/pro/app/agenda?rdv=${a.id}`));
+    assert.ok(!payload.text.includes('Attente') && !payload.text.includes('Demande '), 'no patient data in the e-mail');
+
+    await reminders.runValidationReminders(local(addDaysToDateKey(day, -5), 10));
+    assert.equal((await mails()).length, 2, 'once only');
+
+    // Answered requests are never reminded.
+    const b = await book(amina, 16, { newPatient: { firstName: 'Demande', lastName: 'Confirmee' } });
+    await prisma.appointment.update({ where: { id: b.id }, data: { createdAt: sent } });
+    await reminders.runValidationReminders(local(nextDay, 11));
+    assert.equal(await prisma.notification.count({ where: { relatedAppointmentId: b.id, template: 'appointment.validation-reminder' } }), 0);
   });
 });

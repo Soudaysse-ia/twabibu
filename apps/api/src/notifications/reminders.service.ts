@@ -2,9 +2,24 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { presenceToken } from '../common/presence-token.js';
 import { APP_CONFIG, type AppConfig } from '../config.js';
+import { practitionerName } from '../booking/appointment-view.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { RedisService } from '../redis/redis.service.js';
 import { AppointmentMessagesService } from './appointment-messages.service.js';
-import { DEFAULT_REMINDER_HOUR, DEFAULT_REMINDER_OFFSETS, LOOKAHEAD_DAYS, MIN_LEAD_MINUTES, reminderDecision, reminderDueAt } from './reminder-rules.js';
+import { emailTemplates } from './email-templates.js';
+import { NotificationsService } from './notifications.service.js';
+import {
+  DEFAULT_REMINDER_HOUR,
+  DEFAULT_REMINDER_OFFSETS,
+  LOOKAHEAD_DAYS,
+  MIN_LEAD_MINUTES,
+  reminderDecision,
+  reminderDueAt,
+  VALIDATION_REMINDER_AFTER_HOURS,
+  validationReminderDecision,
+} from './reminder-rules.js';
+
+const VALIDATION_TEMPLATE = 'appointment.validation-reminder';
 
 /** Upper bound per run; a backlog is caught up over the next runs (every 15 minutes). */
 const BATCH_SIZE = 1000;
@@ -27,8 +42,54 @@ export class RemindersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly messages: AppointmentMessagesService,
+    private readonly notifications: NotificationsService,
+    private readonly redis: RedisService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
+
+  /**
+   * Online requests still waiting for the practice's answer after 24 h (SPEC-05 §Règles 6, AGENDA-07): one e-mail,
+   * once, to the practitioner of the agenda and to the owner and administrators. Never to the patient, and no patient
+   * data in the message. The notification journal says it was sent; a Redis claim stops two runs sending it twice.
+   */
+  async runValidationReminders(now: Date = new Date()): Promise<{ checked: number; sent: number }> {
+    const report = { checked: 0, sent: 0 };
+    const requests = await this.prisma.appointment.findMany({
+      where: { status: 'PENDING_VALIDATION', startsAt: { gt: now }, createdAt: { lte: new Date(now.getTime() - VALIDATION_REMINDER_AFTER_HOURS * 3_600_000) } },
+      select: {
+        id: true,
+        startsAt: true,
+        createdAt: true,
+        agenda: { select: { practitioner: { select: { id: true, organizationId: true, title: true, firstName: true, lastName: true } } } },
+      },
+      orderBy: { startsAt: 'asc' },
+      take: BATCH_SIZE,
+    });
+    if (!requests.length) return report;
+    const already = new Set(
+      (await this.prisma.notification.findMany({ where: { template: VALIDATION_TEMPLATE, relatedAppointmentId: { in: requests.map((r) => r.id) } }, select: { relatedAppointmentId: true } })).map((n) => n.relatedAppointmentId),
+    );
+
+    for (const r of requests) {
+      report.checked++;
+      if (already.has(r.id) || validationReminderDecision({ createdAt: r.createdAt, startsAt: r.startsAt, now }) !== 'SEND') continue;
+      // Kept until a day after the appointment: by then there is nothing left to remind.
+      const ttl = Math.max(60, Math.ceil((r.startsAt.getTime() - now.getTime()) / 1000) + 86_400);
+      const claimed = await this.redis.client.set(`twabibu:validation-reminder:${r.id}`, '1', 'EX', ttl, 'NX');
+      if (claimed !== 'OK') continue;
+      const practitioner = r.agenda.practitioner;
+      const members = await this.prisma.membership.findMany({
+        where: { organizationId: practitioner.organizationId, OR: [{ role: { in: ['OWNER', 'ADMIN'] } }, { practitionerId: practitioner.id }] },
+        select: { user: { select: { id: true, email: true } } },
+      });
+      const recipients = new Map(members.filter((m) => m.user.email).map((m) => [m.user.email!, m.user.id]));
+      const email = emailTemplates.validationReminder({ practitionerName: practitionerName(practitioner), startsAt: r.startsAt, url: `${this.config.APP_URL}/pro/app/agenda?rdv=${r.id}` });
+      for (const [to, userId] of recipients) await this.notifications.sendEmail({ to, email, template: VALIDATION_TEMPLATE, userId, appointmentId: r.id });
+      if (recipients.size) report.sent++;
+    }
+    if (report.sent) this.logger.log(`Validation reminders: ${report.sent} requests reminded to their practice`);
+    return report;
+  }
 
   async runDue(now: Date = new Date()): Promise<ReminderRunReport> {
     const report: ReminderRunReport = { checked: 0, sent: 0, optedOut: 0, failed: 0 };
