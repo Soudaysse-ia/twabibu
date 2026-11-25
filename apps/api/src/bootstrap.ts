@@ -1,20 +1,24 @@
 import 'reflect-metadata';
-import { INestApplication } from '@nestjs/common';
+import { ConsoleLogger, INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
 import { csrfMiddleware, originsFrom } from './common/csrf.js';
 import { AllExceptionsFilter } from './common/http-exception.filter.js';
+import { requestLog } from './common/request-log.js';
 import { API_VERSION, loadConfig, type AppConfig } from './config.js';
 
 /** Builds the HTTP application. Shared by main.ts and the integration tests. */
 export async function createApp(config: AppConfig = loadConfig()): Promise<INestApplication> {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule.forRoot(config), { logger: config.NODE_ENV === 'test' ? false : undefined });
+  // Production writes one JSON object per line (Docker keeps them, `scripts/errors.sh` reads them); tests stay quiet.
+  const logger = config.NODE_ENV === 'test' ? false : config.NODE_ENV === 'production' ? new ConsoleLogger({ json: true }) : undefined;
+  const app = await NestFactory.create<NestExpressApplication>(AppModule.forRoot(config), { logger });
   // The API is only reachable from the private Docker network (ADR-020): Caddy writes the visitor's address in
   // X-Forwarded-For and the site passes it on. Trust that header from private addresses only, so req.ip (audit log,
   // sessions) is the visitor and not the site's container. Never publish the API port directly.
   app.set('trust proxy', 'loopback, linklocal, uniquelocal');
+  if (config.NODE_ENV !== 'test') app.use(requestLog());
   app.use(csrfMiddleware(originsFrom([config.APP_URL, config.ADMIN_URL])));
   app.useGlobalFilters(new AllExceptionsFilter());
   app.enableCors({ origin: [config.APP_URL], credentials: true });

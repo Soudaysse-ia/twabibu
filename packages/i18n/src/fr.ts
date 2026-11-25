@@ -531,6 +531,8 @@ export const fr = {
     manage: 'Gérer mes rendez-vous',
     invalidLink: 'Ce lien n’est plus valable. Le rendez-vous a peut-être été déplacé : consultez le dernier e-mail reçu.',
   },
+  /** Appended to an internal error: the first characters of the request id (INFRA-05). */
+  supportReference: (ref: string) => `Si le problème continue, donnez cette référence au support : ${ref}.`,
   errors: {
     VALIDATION_FAILED: 'Certaines informations sont incorrectes. Vérifiez les champs signalés.',
     UNAUTHENTICATED: 'Connectez-vous pour continuer.',

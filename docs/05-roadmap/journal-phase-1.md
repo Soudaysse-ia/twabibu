@@ -570,6 +570,23 @@ Vérifié : 11 tests (réglages de chaque fournisseur, choix du fournisseur, req
 - Aucun compte fournisseur n’est encore ouvert : à choisir (Twilio ou Infobip), à tester sur les deux opérateurs comoriens, et à vérifier si l’expéditeur « Twabibu » est accepté.
 - Pas d’accusés de réception (webhooks) ni de bascule SMS → e-mail.
 
+# Trente-deuxième lot : surveiller le serveur et retrouver une erreur (24 novembre 2026)
+
+INFRA-05, première partie, sans compte chez un service externe : savoir que le site est tombé avant les patients, et retrouver la cause d’une erreur qu’un utilisateur signale.
+
+## Fait
+- **Identifiant de requête** : l’API donne à chaque requête un identifiant (`X-Request-Id`, repris de Caddy ou du site s’il est propre, sinon tiré au hasard) et le renvoie. Sur une erreur interne, le site affiche « Si le problème continue, donnez cette référence au support : a1b2c3d4 ».
+- **Journaux** : une ligne par requête (méthode, route, code, durée, identifiant), au format JSON en production. La route est le modèle (`/v1/pro/invitations/:token`), jamais le chemin réel ni les paramètres ; sur une route inconnue, tout segment qui pourrait être un identifiant ou un nom devient `:x`. Les contrôles de santé ne sont pas journalisés. Les erreurs 500 portent l’identifiant.
+- **`scripts/watch.sh`** (cron toutes les 5 min, installé par `server-setup.sh` et la démo en une commande) : site sur `APP_URL`, API prête (`/api/ready`), disque à moins de 85 %, sauvegarde de moins de 26 h (pas d’alerte le premier jour d’un serveur neuf). Alerte au début, rappel toutes les 6 h, message de retour à la normale ; envoi vers un sujet ntfy privé (application gratuite sur téléphone) et/ou par e-mail via Brevo ; `--test` pour essayer.
+- **`scripts/errors.sh`** : erreurs de l’API des dernières heures, ou tout ce qui concerne une référence donnée par un utilisateur.
+- **Procédure** : §9 « Surveillance et alertes » de `runbooks/mise-en-production-hetzner.md`, réglages `ALERT_WEBHOOK_URL` et `ALERT_EMAIL`.
+
+Vérifié : 3 tests du journal des requêtes (identifiant repris ou refusé, modèle de route, niveaux, contrôles de santé ignorés) ; API lancée en mode production (lignes JSON, jeton d’invitation absent du journal) ; `watch.sh` essayé contre un faux site et une fausse boîte d’alertes : une alerte au début, aucune répétition, retour à la normale, essai, disque et sauvegarde.
+
+## Écarts et limites
+- Pas de Sentry ni de métriques (compte externe à créer) ; les journaux restent sur le serveur (5 × 10 Mo par service).
+- La surveillance tourne sur le serveur lui-même : si le serveur entier s’arrête, aucune alerte ne part. Un contrôle extérieur gratuit (par exemple un moniteur HTTP sur `https://<domaine>/api/ready`) le couvrirait.
+
 # Trente-troisième lot : la journée sur papier (24 novembre 2026)
 
 AGENDA-09, impression. Beaucoup de cabinets travaillent avec une liste papier à l’accueil, et la connexion peut tomber dans la journée : la liste imprimée le matin reste lisible.
