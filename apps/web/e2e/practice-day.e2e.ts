@@ -89,6 +89,14 @@ test('P4 — la secrétaire prend un rendez-vous au téléphone, note l’arriv�
     (await (await page.request.get(`${base}/appointments/${id}`)).json()).status;
   await expect.poll(() => statusOf(booked.id)).toBe('ARRIVED');
 
+  // The day's list on paper: the appointment is there, with a box to tick, and nothing but administrative data.
+  await page.goto(`/pro/agenda/imprimer?date=${day}&agendas=${agenda.id}`);
+  await expect(page.getByRole('heading', { level: 1, name: /Rendez-vous du/ })).toBeVisible();
+  const row = page.getByRole('row').filter({ hasText: 'MZE Ahmed' });
+  await expect(row).toContainText('12:35');
+  await expect(row).toContainText('Arrivé');
+  await expect(page.getByText('Document confidentiel')).toBeVisible();
+
   // End of the day: yesterday's patient who did not come is marked as a no-show.
   const nassur = await patient('Attoumani');
   const missed = await (

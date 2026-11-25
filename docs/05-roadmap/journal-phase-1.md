@@ -587,3 +587,17 @@ Vérifié : 3 tests du journal des requêtes (identifiant repris ou refusé, mod
 - Pas de Sentry ni de métriques (compte externe à créer) ; les journaux restent sur le serveur (5 × 10 Mo par service).
 - La surveillance tourne sur le serveur lui-même : si le serveur entier s’arrête, aucune alerte ne part. Un contrôle extérieur gratuit (par exemple un moniteur HTTP sur `https://<domaine>/api/ready`) le couvrirait.
 
+# Trente-troisième lot : la journée sur papier (24 novembre 2026)
+
+AGENDA-09, impression. Beaucoup de cabinets travaillent avec une liste papier à l’accueil, et la connexion peut tomber dans la journée : la liste imprimée le matin reste lisible.
+
+## Fait
+- **Bouton « Imprimer la journée »** dans l’agenda : il ouvre `/pro/agenda/imprimer` pour le jour affiché et les agendas cochés (tous si aucun).
+- **Feuille** : nom du cabinet, date, puis un tableau par agenda (heure de début et de fin, patient en NOM Prénom avec date de naissance pour distinguer les homonymes, téléphone, motif, statut, case « Arrivé » à cocher au stylo), absences du jour, mention « Document confidentiel… à détruire en fin de journée », date d’impression. Aucune note interne, aucun message du patient, rien de médical. Les agendas montrés sont ceux que l’API autorise, comme à l’écran (une secrétaire limitée à certains agendas ne voit que ceux-là).
+- **Mise en page papier** : l’en-tête du tableau se répète sur chaque page, une ligne n’est jamais coupée, un titre d’agenda ne reste pas seul en bas de page ; page blanche à l’impression (aussi pour les ordonnances).
+
+Vérifié : parcours P4 complété (la secrétaire imprime la journée où elle vient de prendre le rendez-vous : la ligne « MZE Ahmed », 12:35, statut « Arrivé » et la mention de confidentialité sont présents) ; rendu PDF A4 contrôlé sur une journée de 15 rendez-vous répartis sur 6 agendas (2 pages) ; captures à 375 px et 1280 px ; tests et parcours complets.
+
+## Écarts et limites
+- Pas d’export (tableur, agenda du téléphone) ni de choix des colonnes.
+
