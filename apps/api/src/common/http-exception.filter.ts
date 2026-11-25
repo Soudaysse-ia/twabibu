@@ -19,6 +19,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const res = host.switchToHttp().getResponse<Response>();
+    const req = host.switchToHttp().getRequest<{ method?: string }>();
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let body: ApiError = { code: 'INTERNAL_ERROR', message: 'Internal error' };
 
@@ -29,7 +30,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       status = exception.getStatus();
       body = { code: FROM_STATUS[status] ?? 'INTERNAL_ERROR', message: exception.message };
     } else {
-      this.logger.error(exception instanceof Error ? exception.stack ?? exception.message : String(exception));
+      // The request id ties this trace to the access line and to what the user reports (X-Request-Id header).
+      const id = (res.locals as { requestId?: string } | undefined)?.requestId ?? '-';
+      this.logger.error(`${req.method ?? '?'} id=${id} ${exception instanceof Error ? (exception.stack ?? exception.message) : String(exception)}`);
     }
     res.status(status).json(body);
   }

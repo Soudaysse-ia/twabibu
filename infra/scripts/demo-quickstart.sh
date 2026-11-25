@@ -22,7 +22,7 @@ set -euo pipefail
 REF="${TWABIBU_REF:-main}"
 RAW="https://raw.githubusercontent.com/Soudaysse-ia/twabibu/${REF}"
 DIR="${TWABIBU_DIR:-/srv/twabibu}"
-SCRIPTS=(backup.sh deploy.sh restore.sh rollback.sh server-setup.sh demo-quickstart.sh)
+SCRIPTS=(backup.sh deploy.sh restore.sh rollback.sh server-setup.sh demo-quickstart.sh watch.sh errors.sh)
 
 log() { printf '\n== %s\n' "$*"; }
 fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }

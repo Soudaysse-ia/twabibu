@@ -100,11 +100,20 @@ Une sauvegarde sur le même disque n’en est pas une. Le plus simple : une **He
 2. Sur le serveur, en tant que `deploy` : `rclone config` pour ajouter la Storage Box (type `sftp`), puis `BACKUP_RCLONE_REMOTE=storagebox:twabibu` dans `.env`.
 3. Lancer une fois `./scripts/backup.sh` et vérifier qu’il n’affiche plus d’avertissement.
 
-## 9. Vérifications avant d’annoncer le site
+## 9. Surveillance et alertes
+Toutes les 5 minutes, `scripts/watch.sh` (installé par `server-setup.sh`) vérifie que le site répond sur `APP_URL`, que l’API est prête (`/api/ready` : base et Redis), que le disque n’est pas rempli à plus de 85 % et que la dernière sauvegarde a moins de 26 heures. Une alerte part quand un problème commence, un rappel toutes les 6 heures s’il dure, un message quand tout est rétabli ; jamais de donnée personnelle.
+1. **Sur le téléphone** (gratuit, sans compte) : installer l’application **ntfy**, s’abonner à un sujet au nom long et imprévisible (par exemple `twabibu-` suivi de `openssl rand -hex 12`), puis dans `.env` : `ALERT_WEBHOOK_URL=https://ntfy.sh/<ce-sujet>`. Le nom du sujet fait office de mot de passe : ne le publiez nulle part.
+2. **Par e-mail** (en plus ou à la place) : `ALERT_EMAIL=<adresse de l’équipe>` ; l’envoi passe par Brevo (`EMAIL_PROVIDER=brevo`).
+3. Essai : `./scripts/watch.sh --test` doit faire arriver « Twabibu : test d’alerte ». L’historique des problèmes est dans `backups/watch.log`.
+
+**Retrouver une erreur.** Quand une page affiche « Si le problème continue, donnez cette référence au support : a1b2c3d4 », `./scripts/errors.sh 24h a1b2c3d4` montre la requête et son erreur ; `./scripts/errors.sh` liste les erreurs de l’API des dernières 24 heures. Les journaux ne contiennent ni paramètres de recherche, ni contenu des formulaires, ni jeton : seulement la route (`/v1/pro/invitations/:token`), le code de réponse et la durée.
+
+## 10. Vérifications avant d’annoncer le site
 - [ ] `https://<domaine>/api/ready` répond `{"status":"ok", …}`.
 - [ ] Inscription patient avec une vraie adresse e-mail : le code arrive (production) ; code `000000` (pré-production).
 - [ ] `https://admin.<domaine>` refuse une adresse IP hors de `ADMIN_ALLOWED_IPS` (« Accès réservé »).
 - [ ] `ssh deploy@<IP> 'ls -l /srv/twabibu/backups'` montre une sauvegarde du jour ; `./scripts/restore.sh --test <fichier>` réussit.
 - [ ] Enregistrements SPF et DKIM de Brevo ajoutés dans Cloudflare (sinon les codes partent en indésirables).
 - [ ] Les secrets sont dans le gestionnaire de mots de passe, nulle part ailleurs.
+- [ ] `./scripts/watch.sh --test` fait arriver l’alerte d’essai sur le téléphone ou par e-mail.
 - [ ] Au lancement public seulement (textes juridiques validés, LEGAL-01) : `ALLOW_INDEXING=true` dans `/srv/twabibu/.env`, puis `docker compose up -d web` ; vérifier que `https://<domaine>/robots.txt` autorise `/` et annonce `sitemap.xml`. Jamais sur la pré-production.
